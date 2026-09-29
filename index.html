@@ -2,6 +2,15 @@
 <title>Pixel Farm</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4a3320">
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+</script>
 <style>
   :root{
     --sky-top:#8fd7f0;
@@ -631,7 +640,12 @@
     box-shadow:0 0 10px #39ff6e, 0 2px 4px rgba(0,0,0,.4);
     animation:dotSwiperPulse .5s ease-in-out infinite alternate;
   }
-  .dotSwiperDot.swiped{ animation:none; transform:scale(1.7); opacity:0; transition:all .15s ease-out; }
+  .dotSwiperDot.swiped{ animation:dotSwiperSwipe .25s ease-out forwards; }
+  @keyframes dotSwiperSwipe{
+    0%{ background:#39ff6e; transform:scale(1); opacity:1; }
+    30%{ background:#fff; transform:scale(1.25); opacity:1; }
+    100%{ background:#fff; transform:scale(1.6); opacity:0; }
+  }
   @keyframes dotSwiperPulse{ from{ transform:scale(.85); opacity:.8; } to{ transform:scale(1.05); opacity:1; } }
   .clickArea.dotReactionArea{ height:260px; }
   .reactDot{
@@ -872,6 +886,10 @@
 (function(){
 'use strict';
 
+// ask the browser not to evict this site's localStorage under disk-space pressure
+// (best-effort by default; this upgrades it to "persistent" where the browser allows it)
+try{ if(navigator.storage && navigator.storage.persist){ navigator.storage.persist(); } }catch(e){}
+
 /* ===================== SOUND ===================== */
 var SFX = (function(){
   var ctx = null;
@@ -904,7 +922,7 @@ var SFX = (function(){
     open:    function(){ if(!playReal('open')){ tone(500, 0.06, 'sine', 0.12); tone(750, 0.08, 'sine', 0.12, 0.05); } },
     close:   function(){ if(!playReal('close')){ tone(500, 0.06, 'sine', 0.12); tone(320, 0.08, 'sine', 0.12, 0.05); } },
     notify:  function(){ if(!playReal('notify')){ tone(760, 0.05, 'sine', 0.1); } },
-    mgClick: function(){ if(state && state.lowerLagMode) return; if(!playReal('mgclick', randomClickRate())){ tone(900, 0.03, 'square', 0.07); } },
+    mgClick: function(){ /* Mini-game click sound temporarily disabled */ },
     appear:  function(){ if(!playReal('appear')){ tone(650, 0.05, 'sine', 0.11); tone(950, 0.07, 'sine', 0.11, 0.04); } },
     start:   function(){ if(!playReal('start')){ tone(440, 0.06, 'square', 0.12); tone(660, 0.08, 'square', 0.12, 0.05); } },
     green:   function(){ if(!playReal('green')){ tone(500, 0.07, 'sine', 0.13); tone(750, 0.09, 'sine', 0.13, 0.04); } },
@@ -2783,7 +2801,7 @@ function renderHarvestResult(plant, score, label){
 /* -- 1. Spacebar Clicker -- */
 function gameSpacebar(){
   readyScreen('Press SPACE as many times as you can in 10 seconds! (keyboard only)', function(){
-    var count = 0, timeLeft = 10;
+    var count = 0; var roundStart = performance.now();
     gameBody.innerHTML =
       '<div class="gDesc">Mash SPACE!</div>' +
       '<div id="gTimerBar"><div></div></div>' +
@@ -2795,7 +2813,7 @@ function gameSpacebar(){
     window.addEventListener('keydown', onKey);
     armSkip(function(){ return count; });
     var interval = setInterval(function(){
-      timeLeft -= 0.1;
+      var timeLeft = Math.max(0, (10000 - (performance.now() - roundStart)) / 1000); // wall-clock based so lag can't stretch the round
       bar.style.width = Math.max(0,(timeLeft/10*100))+'%';
       if(timeLeft <= 0){
         clearInterval(interval);
@@ -2818,7 +2836,7 @@ function buildTypingText(){
 function gameTyping(){
   readyScreen('Type the sentence(s) as accurately as you can in 20 seconds!', function(){
     var text = buildTypingText();
-    var timeLeft = 20;
+    var roundStart = performance.now();
     gameBody.innerHTML =
       '<div class="typingBox" id="typingDisplay"></div>' +
       '<input id="typingInput" autocomplete="off" spellcheck="false" placeholder="start typing...">' +
@@ -2830,6 +2848,7 @@ function gameTyping(){
     var stat = document.getElementById('typingStat');
     var correctCount = 0;
     var prevLen = 0;
+    var correctStreak = 0, comboScore = 0; // 10-in-a-row streak doubles points per correct char until a mistake
     var ERROR_RATES = [0.9, 1.0, 1.1];
     function charsMatch(a, b){ return a.toLowerCase() === b.toLowerCase(); } // case is never marked wrong
     function renderText(){
@@ -2850,10 +2869,14 @@ function gameTyping(){
       var typed = input.value;
       if(typed.length > prevLen){
         var idx = typed.length - 1;
-        if(idx < text.length && !charsMatch(typed[idx], text[idx])){
+        var isRight = idx < text.length && charsMatch(typed[idx], text[idx]);
+        if(!isRight){
           SFX.error(ERROR_RATES[rand(0, ERROR_RATES.length - 1)]);
+          correctStreak = 0;
         } else {
           SFX.mgClick();
+          correctStreak++;
+          comboScore += (correctStreak >= 10) ? 2 : 1; // 2x per character once you've hit a 10-streak
         }
       } else {
         SFX.mgClick();
@@ -2863,18 +2886,18 @@ function gameTyping(){
       if(input.value.length >= text.length){
         clearInterval(interval);
         input.disabled = true;
-        finishMinigame(correctCount, correctCount+' correct characters!');
+        finishMinigame(comboScore, correctCount+' correct characters!');
       }
     });
     setTimeout(function(){ input.focus(); }, 50);
-    armSkip(function(){ return correctCount; });
+    armSkip(function(){ return comboScore; });
     var interval = setInterval(function(){
-      timeLeft -= 0.1;
+      var timeLeft = Math.max(0, (20000 - (performance.now() - roundStart)) / 1000); // wall-clock based so lag can't stretch the round
       bar.style.width = Math.max(0,(timeLeft/20*100))+'%';
       if(timeLeft <= 0){
         clearInterval(interval);
         input.disabled = true;
-        finishMinigame(correctCount, correctCount+' correct characters!');
+        finishMinigame(comboScore, correctCount+' correct characters!');
       }
     }, 100);
     activeCleanup = function(){ clearInterval(interval); };
@@ -2884,7 +2907,7 @@ function gameTyping(){
 /* -- 3. Mouse Speed Test -- */
 function gameMouse(){
   readyScreen(moveHintPhrase().replace(/^./, function(c){ return c.toUpperCase(); }) + ' as much as possible in 10 seconds!', function(){
-    var dist = 0, lastX=null, lastY=null, timeLeft = 10;
+    var dist = 0, lastX=null, lastY=null; var roundStart = performance.now();
     gameBody.innerHTML =
       '<div class="clickArea" id="mouseArea">🖱️ '+(inputMode==='touch' ? 'DRAG HERE!' : 'MOVE HERE!')+'</div>' +
       '<div id="gTimerBar"><div></div></div>' +
@@ -2917,7 +2940,7 @@ function gameMouse(){
     gamepadStickSampler = addDist;
     armSkip(function(){ return dist/1000; });
     var interval = setInterval(function(){
-      timeLeft -= 0.1;
+      var timeLeft = Math.max(0, (10000 - (performance.now() - roundStart)) / 1000); // wall-clock based so lag can't stretch the round
       bar.style.width = Math.max(0,(timeLeft/10*100))+'%';
       if(timeLeft <= 0){
         clearInterval(interval);
@@ -2992,7 +3015,7 @@ function gameReaction(){
 /* -- 5. CPS -- */
 function gameCPS(){
   readyScreen(actionPhrase().replace(/^./, function(c){ return c.toUpperCase(); }) + ' as fast as you can in 10 seconds!', function(){
-    var count = 0, timeLeft = 10;
+    var count = 0; var roundStart = performance.now();
     gameBody.innerHTML =
       '<div class="clickArea" id="cpsArea">👆 '+(inputMode==='touch' ? 'TAP!' : 'CLICK!')+'</div>' +
       '<div id="gTimerBar"><div></div></div>' +
@@ -3007,7 +3030,7 @@ function gameCPS(){
     gamepadActionCallback = onClick;
     armSkip(function(){ return count; });
     var interval = setInterval(function(){
-      timeLeft -= 0.1;
+      var timeLeft = Math.max(0, (10000 - (performance.now() - roundStart)) / 1000); // wall-clock based so lag can't stretch the round
       bar.style.width = Math.max(0,(timeLeft/10*100))+'%';
       if(timeLeft <= 0){
         clearInterval(interval);
@@ -3023,7 +3046,7 @@ function gameCPS(){
 /* -- 6. Jitter Test -- */
 function gameJitter(){
   readyScreen((inputMode==='touch' ? 'Tap rapidly' : 'Press any key rapidly') + (gamepadConnected ? ', or mash R2,' : '') + ' in 10 seconds!', function(){
-    var count = 0, timeLeft = 10;
+    var count = 0; var roundStart = performance.now();
     gameBody.innerHTML =
       '<div class="clickArea" id="jitArea">⌨️ '+(inputMode==='touch' ? 'TAP!' : 'MASH!')+'</div>' +
       '<div id="gTimerBar"><div></div></div>' +
@@ -3040,7 +3063,7 @@ function gameJitter(){
     gamepadActionCallback = bump;
     armSkip(function(){ return count; });
     var interval = setInterval(function(){
-      timeLeft -= 0.1;
+      var timeLeft = Math.max(0, (10000 - (performance.now() - roundStart)) / 1000); // wall-clock based so lag can't stretch the round
       bar.style.width = Math.max(0,(timeLeft/10*100))+'%';
       if(timeLeft <= 0){
         clearInterval(interval);
@@ -3099,8 +3122,9 @@ function gameDotSwiper(){
     var bar = gameBody.querySelector('#gTimerBar > div');
     var scoreEl = document.getElementById('dotScore');
     var activeDots = [];
-    var DOT_LIFETIME = 500; // ms a dot lingers before vanishing unswiped
+    var DOT_LIFETIME = 1000; // ms a dot lingers before vanishing unswiped (1 full second)
     var DOT_RADIUS = 22; // px proximity needed to count as "touched"
+    var SWIPE_ANIM_MS = 250; // must match the .dotSwiperDot.swiped CSS animation duration
 
     function removeDot(dot){
       var i = activeDots.indexOf(dot);
@@ -3128,12 +3152,16 @@ function gameDotSwiper(){
       var rect = area.getBoundingClientRect();
       var lx = px - rect.left, ly = py - rect.top;
       activeDots.slice().forEach(function(dot){
+        if(dot.swiped) return;
         var dx = lx - dot.x, dy = ly - dot.y;
         if(Math.sqrt(dx*dx + dy*dy) <= DOT_RADIUS){
+          dot.swiped = true;
           score += 5;
           scoreEl.textContent = score;
           SFX.disappear();
-          removeDot(dot);
+          clearTimeout(dot.expireTimer);
+          dot.el.classList.add('swiped'); // flashes white then fades, see CSS
+          setTimeout(function(){ removeDot(dot); }, SWIPE_ANIM_MS);
         }
       });
     }
@@ -3167,9 +3195,10 @@ function gameDotSwiper(){
     }
     armSkip(function(){ return score; });
     spawnDot();
+    var roundStart = performance.now();
     var spawnInterval = setInterval(spawnDot, 250);
     var interval = setInterval(function(){
-      timeLeft -= 0.1;
+      var timeLeft = Math.max(0, (10000 - (performance.now() - roundStart)) / 1000); // wall-clock based so lag can't stretch the round
       bar.style.width = Math.max(0,(timeLeft/10*100))+'%';
       if(timeLeft <= 0){
         clearInterval(interval);
@@ -3192,7 +3221,7 @@ function gameDotSwiper(){
 /* -- 9. Dot Reaction -- */
 function gameDotReaction(){
   readyScreen('Green dot = '+actionPhrase()+' it fast! Red dot = leave it alone! 10 seconds!', function(){
-    var score = 0, timeLeft = 10, roundOver = false;
+    var score = 0, roundOver = false; var roundStart = performance.now();
     gameBody.innerHTML =
       '<div class="clickArea dotArea dotReactionArea" id="reactArea"></div>' +
       '<div id="gTimerBar"><div></div></div>' +
@@ -3261,7 +3290,7 @@ function gameDotReaction(){
     armSkip(function(){ return Math.max(0, score); });
     spawnDot();
     var interval = setInterval(function(){
-      timeLeft -= 0.1;
+      var timeLeft = Math.max(0, (10000 - (performance.now() - roundStart)) / 1000); // wall-clock based so lag can't stretch the round
       bar.style.width = Math.max(0,(timeLeft/10*100))+'%';
       if(timeLeft <= 0){
         roundOver = true;
@@ -3280,7 +3309,7 @@ function gameFollowBall(){
   var moveWord = inputMode==='touch' ? 'finger' : 'mouse';
   var extra = gamepadConnected ? ' (or push a stick)' : '';
   readyScreen('Keep your '+moveWord+extra+' on the ball as it bounces around! It turns red when you lose it. 10 seconds!', function(){
-    var score = 0, timeLeft = 10;
+    var score = 0; var roundStart = performance.now();
     gameBody.innerHTML =
       '<div class="clickArea followBallArea" id="followArea"><div class="followBall" id="followBall"></div></div>' +
       '<div id="gTimerBar"><div></div></div>' +
@@ -3354,8 +3383,8 @@ function gameFollowBall(){
         var ticks = Math.floor(streakElapsed/TICK_MS);
         while(lastAwardTicks < ticks){
           lastAwardTicks++;
-          var secondIndex = Math.floor((lastAwardTicks*TICK_MS)/1000); // 0 for the 1st second of the streak, 1 for the 2nd, etc.
-          score += Math.pow(2, secondIndex); // rate doubles every full second the streak stays unbroken
+          var secondIndex = Math.floor((lastAwardTicks*TICK_MS)/1000); // 0 for the 1st second of the streak, 1+ for every second after
+          score += (secondIndex === 0 ? 1 : 2); // jumps to 2x after the 1st second, but caps there -- no further stacking
           scoreEl.textContent = score;
           SFX.mgClick();
         }
@@ -3367,7 +3396,7 @@ function gameFollowBall(){
     raf = requestAnimationFrame(frame);
     armSkip(function(){ return score; });
     var interval = setInterval(function(){
-      timeLeft -= 0.1;
+      var timeLeft = Math.max(0, (10000 - (performance.now() - roundStart)) / 1000); // wall-clock based so lag can't stretch the round
       bar.style.width = Math.max(0,(timeLeft/10*100))+'%';
       if(timeLeft <= 0){
         roundOver = true;
@@ -3395,7 +3424,7 @@ function reactionMsToMult(ms){
 }
 function gameClickSpeed(){
   readyScreen('Click as fast as you can, over and over — the game measures the gap between each of your clicks! 10 seconds!', function(){
-    var timeLeft = 10;
+    var roundStart = performance.now();
     var lastClickAt = null;
     var bestMs = Infinity;
     gameBody.innerHTML =
@@ -3423,7 +3452,7 @@ function gameClickSpeed(){
     gamepadActionCallback = registerClick;
     armSkip(function(){ return bestMs === Infinity ? 0 : reactionMsToMult(bestMs); });
     var interval = setInterval(function(){
-      timeLeft -= 0.1;
+      var timeLeft = Math.max(0, (10000 - (performance.now() - roundStart)) / 1000); // wall-clock based so lag can't stretch the round
       bar.style.width = Math.max(0,(timeLeft/10*100))+'%';
       if(timeLeft <= 0){
         clearInterval(interval);
