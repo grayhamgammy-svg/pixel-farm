@@ -1188,6 +1188,8 @@ var INITIAL_COLS = 3;
 var FARM_COLS = 3; // the farm is always 3 wide; it only ever grows taller (more rows)
 var SAVE_KEY = 'pixelfarm_save_v3';
 var SAVE_KEY_BACKUP = 'pixelfarm_save_v3_backup';
+var RESET_COOLDOWN_KEY = 'pixelfarm_last_reset'; // separate key -- must survive the reset itself
+var RESET_COOLDOWN_MS = 10 * 60 * 1000;
 var DOLLAR = 1000; // 1000 pixels = $1 = 100 cents
 var CENT = 10;      // 10 pixels = 1 cent
 var TIME_BOOST_DIVISOR = 10;  // mini-game scores are 10x weaker when used as seconds
@@ -3600,6 +3602,13 @@ function start(hotData){
   var resetOverlay = document.getElementById('resetOverlay');
   document.getElementById('resetBtn').addEventListener('click', function(){
     SFX.click();
+    var lastReset = parseInt(localStorage.getItem(RESET_COOLDOWN_KEY) || '0', 10);
+    var sinceReset = Date.now() - lastReset;
+    if(sinceReset < RESET_COOLDOWN_MS){
+      var remainMin = Math.ceil((RESET_COOLDOWN_MS - sinceReset) / 60000);
+      toast('Reset is on cooldown — ' + remainMin + ' more minute' + (remainMin===1?'':'s') + '.');
+      return;
+    }
     resetOverlay.hidden = false;
   });
   document.getElementById('resetCancelBtn').addEventListener('click', function(){
@@ -3608,6 +3617,7 @@ function start(hotData){
   });
   document.getElementById('resetYesBtn').addEventListener('click', function(){
     SFX.click();
+    try{ localStorage.setItem(RESET_COOLDOWN_KEY, String(Date.now())); }catch(e){}
     try{ localStorage.removeItem(SAVE_KEY); localStorage.removeItem(SAVE_KEY_BACKUP); }catch(e){}
     // the artifact's hot-reload snapshot survives a plain reload and would otherwise
     // resurrect the old (just-deleted) save the instant the page comes back up
