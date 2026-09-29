@@ -3628,13 +3628,26 @@ function start(hotData){
 
   document.getElementById('exportSaveBtn').addEventListener('click', async function(){
     SFX.click();
+    var raw = localStorage.getItem(SAVE_KEY) || JSON.stringify(state);
     try{
+      // the claude.ai artifact sandbox blocks plain <a download> links, so use its
+      // dedicated downloads capability there -- but that API doesn't exist on a normal
+      // website (like this one hosted outside claude.ai), so fall back to a standard
+      // Blob download in that case, which works everywhere else.
       var downloads = (window.claude && window.claude.use) ? await window.claude.use('downloads') : null;
-      if(!downloads){ toast('Save-to-file isn\'t available in this view.'); return; }
-      var raw = localStorage.getItem(SAVE_KEY) || JSON.stringify(state);
-      var result = await downloads.save({ filename:'pixel-farm-save.json', data: raw });
-      if(result && result.status === 'saved'){ toast('Save file downloaded!'); }
-      else { toast('Save file sent!'); }
+      if(downloads){
+        var result = await downloads.save({ filename:'pixel-farm-save.json', data: raw });
+        if(result && result.status === 'saved'){ toast('Save file downloaded!'); }
+        else { toast('Save file sent!'); }
+        return;
+      }
+      var blob = new Blob([raw], { type:'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'pixel-farm-save.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast('Save file downloaded!');
     }catch(e){
       if(e && e.code === 'declined'){ /* viewer said no; no toast */ }
       else { toast('Could not export save.'); }
