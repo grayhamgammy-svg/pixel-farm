@@ -635,7 +635,7 @@ if('serviceWorker' in navigator){
   }
   .dotArea{ position:relative; overflow:hidden; background:var(--panel-2); }
   .dotSwiperDot{
-    position:absolute; width:30px; height:30px; margin-left:-15px; margin-top:-15px;
+    position:absolute; width:45px; height:45px; margin-left:-22.5px; margin-top:-22.5px;
     background:#39ff6e; border-radius:50%;
     box-shadow:0 0 10px #39ff6e, 0 2px 4px rgba(0,0,0,.4);
     animation:dotSwiperPulse .5s ease-in-out infinite alternate;
@@ -671,6 +671,16 @@ if('serviceWorker' in navigator){
     border:5px solid #000; border-top:none; border-radius:0 0 45px 45px;
   }
   @keyframes reactDotSpin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
+  .reactMissText{
+    position:absolute; transform:translate(-50%,-50%);
+    font-family:'Press Start 2P', monospace; font-size:10px; color:#ff3b3b;
+    text-shadow:0 0 4px rgba(0,0,0,.8); pointer-events:none; z-index:6; white-space:nowrap;
+    animation:reactMissFade 1s ease-out forwards;
+  }
+  @keyframes reactMissFade{
+    0%{ opacity:1; transform:translate(-50%,-50%) translateY(0); }
+    100%{ opacity:0; transform:translate(-50%,-50%) translateY(-24px); }
+  }
   .followBallArea{ position:relative; height:220px; }
   .followBall{
     position:absolute; width:44px; height:44px; margin-left:-22px; margin-top:-22px;
@@ -678,6 +688,7 @@ if('serviceWorker' in navigator){
     box-shadow:0 4px 8px rgba(0,0,0,.4);
   }
   .followBall.onTarget{ background:#39ff45; }
+  .followBall.onTarget.pinkStreak{ background:#ff5cb3; }
   .gamepadCursor{
     position:absolute; width:22px; height:22px; margin-left:-11px; margin-top:-11px;
     border:3px solid #fff; border-radius:50%; box-shadow:0 0 6px rgba(0,0,0,.7);
@@ -1054,81 +1065,81 @@ var SEED_TYPES = [
   { id:'crystalberry', name:'Crystal Berry Seed', icon:'💎', plant:'💎', rarity:'rare', hidden:true,
     price:2000, fruitValue:0.080, maxGrowth:220, seedSizeBoostRange:[1,1.65], fruitRange:[1,9], extraVariantBonus:1.45, growthDivisor:1150, secondSpeedBoost:1.20 },
   { id:'goldapple', name:'Golden Apple Seed', icon:'🍏', plant:'🍏', rarity:'legendary', hidden:false,
-    price:6250, fruitValue:0.150, maxGrowth:Infinity, seedSizeBoostRange:[1,1.55], fruitRange:[3,10], extraVariantBonus:1.30, growthDivisor:1000, secondSpeedBoost:1.00 },
+    price:6250, fruitValue:0.150, maxGrowth:Infinity, seedSizeBoostRange:[1,1.55], fruitRange:[3,10], extraVariantBonus:1.30, growthDivisor:5000, secondSpeedBoost:1.00 },
   { id:'starfruit', name:'Starfruit Seed', icon:'⭐', plant:'⭐', rarity:'mythic', hidden:true,
-    price:15000, fruitValue:0.225, maxGrowth:Infinity, seedSizeBoostRange:[1,1.75], fruitRange:[1,12], extraVariantBonus:2.00, growthDivisor:800, secondSpeedBoost:1.30 },
+    price:15000, fruitValue:0.225, maxGrowth:Infinity, seedSizeBoostRange:[1,1.75], fruitRange:[1,12], extraVariantBonus:2.00, growthDivisor:4000, secondSpeedBoost:1.30 },
   { id:'cosmiccactus', name:'Cosmic Cactus Seed', icon:'🌵', plant:'🌵', rarity:'mythic', hidden:true,
-    price:25000, fruitValue:0.338, maxGrowth:Infinity, seedSizeBoostRange:[1,1.65], fruitRange:[5,20], extraVariantBonus:2.50, growthDivisor:700, secondSpeedBoost:1.50 },
+    price:25000, fruitValue:0.338, maxGrowth:Infinity, seedSizeBoostRange:[1,1.65], fruitRange:[5,20], extraVariantBonus:2.50, growthDivisor:3500, secondSpeedBoost:1.50 },
   { id:'wiltedflower', name:'Wilted Flower Seed', icon:'🥀', plant:'🥀', rarity:'mythic', hidden:true,
-    price:27500, fruitValue:0.550, maxGrowth:Infinity, seedSizeBoostRange:[1,2.75], fruitRange:[1,35], extraVariantBonus:1.80, growthDivisor:850, secondSpeedBoost:1.15 },
+    price:27500, fruitValue:0.550, maxGrowth:Infinity, seedSizeBoostRange:[1,2.75], fruitRange:[1,35], extraVariantBonus:1.80, growthDivisor:4250, secondSpeedBoost:1.15 },
   { id:'tulip', name:'Tulip Seed', icon:'🌷', plant:'🌷', rarity:'mythic', hidden:true,
-    price:31250, fruitValue:0.620, maxGrowth:Infinity, seedSizeBoostRange:[1,1.5], fruitRange:[1,15], extraVariantBonus:1.60, growthDivisor:900, secondSpeedBoost:1.35 },
+    price:31250, fruitValue:0.620, maxGrowth:Infinity, seedSizeBoostRange:[1,1.5], fruitRange:[1,15], extraVariantBonus:1.60, growthDivisor:4500, secondSpeedBoost:1.35 },
   { id:'blossom', name:'Blossom Seed', icon:'🌼', plant:'🌼', rarity:'mythic', hidden:true,
-    price:35000, fruitValue:0.850, maxGrowth:Infinity, seedSizeBoostRange:[1,3], fruitRange:[1,13], extraVariantBonus:2.00, growthDivisor:800, secondSpeedBoost:1.25 },
+    price:35000, fruitValue:0.850, maxGrowth:Infinity, seedSizeBoostRange:[1,3], fruitRange:[1,13], extraVariantBonus:2.00, growthDivisor:4000, secondSpeedBoost:1.25 },
   { id:'rose', name:'Rose Seed', icon:'🌹', plant:'🌹', rarity:'mythic', hidden:true,
-    price:40000, fruitValue:1.100, maxGrowth:Infinity, seedSizeBoostRange:[1,3.2], fruitRange:[1,10], extraVariantBonus:2.25, growthDivisor:700, secondSpeedBoost:1.10 },
+    price:40000, fruitValue:1.100, maxGrowth:Infinity, seedSizeBoostRange:[1,3.2], fruitRange:[1,10], extraVariantBonus:2.25, growthDivisor:3500, secondSpeedBoost:1.10 },
   { id:'moonflower', name:'Hibiscus Seed', icon:'🌺', plant:'🌺', rarity:'legendary', hidden:true,
-    price:12500, fruitValue:0.200, maxGrowth:Infinity, seedSizeBoostRange:[1,5.0], fruitRange:[1,17], extraVariantBonus:2.15, growthDivisor:700, secondSpeedBoost:1.20 },
+    price:12500, fruitValue:0.200, maxGrowth:Infinity, seedSizeBoostRange:[1,5.0], fruitRange:[1,17], extraVariantBonus:2.15, growthDivisor:3500, secondSpeedBoost:1.20 },
   { id:'lotus', name:'Lotus Seed', icon:'🪷', plant:'🪷', rarity:'mythic', hidden:true,
-    price:50000, fruitValue:1.650, maxGrowth:Infinity, seedSizeBoostRange:[1,6.0], fruitRange:[1,18], extraVariantBonus:2.50, growthDivisor:600, secondSpeedBoost:1.25 },
+    price:50000, fruitValue:1.650, maxGrowth:Infinity, seedSizeBoostRange:[1,6.0], fruitRange:[1,18], extraVariantBonus:2.50, growthDivisor:3000, secondSpeedBoost:1.25 },
   { id:'hyacinth', name:'Hyacinth Seed', icon:'🪻', plant:'🪻', rarity:'legendary', hidden:true,
-    price:21250, fruitValue:0.240, maxGrowth:Infinity, seedSizeBoostRange:[1,3.0], fruitRange:[1,30], extraVariantBonus:1.15, growthDivisor:1000, secondSpeedBoost:1.05 },
+    price:21250, fruitValue:0.240, maxGrowth:Infinity, seedSizeBoostRange:[1,3.0], fruitRange:[1,30], extraVariantBonus:1.15, growthDivisor:5000, secondSpeedBoost:1.05 },
   { id:'fourleafclover', name:'Four-Leaf Clover Seed', icon:'🍀', plant:'🍀', rarity:'legendary', hidden:true,
-    price:23750, fruitValue:0.450, maxGrowth:Infinity, seedSizeBoostRange:[1,5.0], fruitRange:[1,30], extraVariantBonus:3.00, growthDivisor:1100, secondSpeedBoost:1.00 },
+    price:23750, fruitValue:0.450, maxGrowth:Infinity, seedSizeBoostRange:[1,5.0], fruitRange:[1,30], extraVariantBonus:3.00, growthDivisor:5500, secondSpeedBoost:1.00 },
   { id:'shamrock', name:'Shamrock Seed', icon:'☘️', plant:'☘️', rarity:'legendary', hidden:true,
-    price:17500, fruitValue:0.185, maxGrowth:Infinity, seedSizeBoostRange:[1,1.5], fruitRange:[1,30], extraVariantBonus:1.05, growthDivisor:1050, secondSpeedBoost:1.15 },
+    price:17500, fruitValue:0.185, maxGrowth:Infinity, seedSizeBoostRange:[1,1.5], fruitRange:[1,30], extraVariantBonus:1.05, growthDivisor:5250, secondSpeedBoost:1.15 },
   { id:'mapleleaf', name:'Maple Leaf Seed', icon:'🍁', plant:'🍁', rarity:'legendary', hidden:true,
-    price:25000, fruitValue:0.500, maxGrowth:Infinity, seedSizeBoostRange:[1,7.0], fruitRange:[1,40], extraVariantBonus:1.75, growthDivisor:920, secondSpeedBoost:1.10 },
+    price:25000, fruitValue:0.500, maxGrowth:Infinity, seedSizeBoostRange:[1,7.0], fruitRange:[1,40], extraVariantBonus:1.75, growthDivisor:4600, secondSpeedBoost:1.10 },
   { id:'herb', name:'Herb Seed', icon:'🌿', plant:'🌿', rarity:'legendary', hidden:true,
-    price:15000, fruitValue:0.075, maxGrowth:Infinity, seedSizeBoostRange:[1,1.1], fruitRange:[1,30], extraVariantBonus:1.00, growthDivisor:950, secondSpeedBoost:1.20 },
+    price:15000, fruitValue:0.075, maxGrowth:Infinity, seedSizeBoostRange:[1,1.1], fruitRange:[1,30], extraVariantBonus:1.00, growthDivisor:4750, secondSpeedBoost:1.20 },
   { id:'mushroom', name:'Mushroom Seed', icon:'🍄', plant:'🍄', rarity:'legendary', hidden:true,
-    price:22500, fruitValue:0.600, maxGrowth:Infinity, seedSizeBoostRange:[1,1.4], fruitRange:[1,25], extraVariantBonus:1.50, growthDivisor:800, secondSpeedBoost:1.05 },
+    price:22500, fruitValue:0.600, maxGrowth:Infinity, seedSizeBoostRange:[1,1.4], fruitRange:[1,25], extraVariantBonus:1.50, growthDivisor:4000, secondSpeedBoost:1.05 },
   { id:'corn', name:'Corn Seed', icon:'🌽', plant:'🌽', rarity:'legendary', hidden:true,
-    price:18750, fruitValue:0.130, maxGrowth:Infinity, seedSizeBoostRange:[1,1.2], fruitRange:[1,3], extraVariantBonus:1.05, growthDivisor:1200, secondSpeedBoost:1.40 },
+    price:18750, fruitValue:0.130, maxGrowth:Infinity, seedSizeBoostRange:[1,1.2], fruitRange:[1,3], extraVariantBonus:1.05, growthDivisor:6000, secondSpeedBoost:1.40 },
   { id:'strawberry', name:'Strawberry Seed', icon:'🍓', plant:'🍓', rarity:'legendary', hidden:true,
-    price:21250, fruitValue:0.200, maxGrowth:Infinity, seedSizeBoostRange:[1,1.25], fruitRange:[1,8], extraVariantBonus:1.20, growthDivisor:1000, secondSpeedBoost:1.30 },
+    price:21250, fruitValue:0.200, maxGrowth:Infinity, seedSizeBoostRange:[1,1.25], fruitRange:[1,8], extraVariantBonus:1.20, growthDivisor:5000, secondSpeedBoost:1.30 },
   { id:'blueberry', name:'Blueberry Seed', icon:'🫐', plant:'🫐', rarity:'mythic', hidden:true,
-    price:30000, fruitValue:0.700, maxGrowth:Infinity, seedSizeBoostRange:[1,1.45], fruitRange:[1,20], extraVariantBonus:1.70, growthDivisor:780, secondSpeedBoost:1.30 },
+    price:30000, fruitValue:0.700, maxGrowth:Infinity, seedSizeBoostRange:[1,1.45], fruitRange:[1,20], extraVariantBonus:1.70, growthDivisor:3900, secondSpeedBoost:1.30 },
   { id:'cherries', name:'Cherries Seed', icon:'🍒', plant:'🍒', rarity:'mythic', hidden:true,
-    price:133750, fruitValue:0.900, maxGrowth:Infinity, seedSizeBoostRange:[1,1.55], fruitRange:[1,18], extraVariantBonus:1.85, growthDivisor:760, secondSpeedBoost:1.20 },
+    price:133750, fruitValue:0.900, maxGrowth:Infinity, seedSizeBoostRange:[1,1.55], fruitRange:[1,18], extraVariantBonus:1.85, growthDivisor:3800, secondSpeedBoost:1.20 },
   { id:'redapple', name:'Red Apple Seed', icon:'🍎', plant:'🍎', rarity:'legendary', hidden:true,
-    price:23750, fruitValue:0.350, maxGrowth:Infinity, seedSizeBoostRange:[1,1.35], fruitRange:[1,25], extraVariantBonus:1.10, growthDivisor:870, secondSpeedBoost:1.10 },
+    price:23750, fruitValue:0.350, maxGrowth:Infinity, seedSizeBoostRange:[1,1.35], fruitRange:[1,25], extraVariantBonus:1.10, growthDivisor:4350, secondSpeedBoost:1.10 },
   { id:'avocado', name:'Avocado Seed', icon:'🥑', plant:'🥑', rarity:'mythic', hidden:true,
-    price:36250, fruitValue:1.200, maxGrowth:Infinity, seedSizeBoostRange:[1,1.8], fruitRange:[1,7], extraVariantBonus:1.90, growthDivisor:700, secondSpeedBoost:1.05 },
+    price:36250, fruitValue:1.200, maxGrowth:Infinity, seedSizeBoostRange:[1,1.8], fruitRange:[1,7], extraVariantBonus:1.90, growthDivisor:3500, secondSpeedBoost:1.05 },
   { id:'hotpepper', name:'Hot Pepper Seed', icon:'🌶️', plant:'🌶️', rarity:'mythic', hidden:true,
-    price:37500, fruitValue:0.800, maxGrowth:Infinity, seedSizeBoostRange:[1,1.6], fruitRange:[1,8], extraVariantBonus:2.10, growthDivisor:650, secondSpeedBoost:1.60 },
+    price:37500, fruitValue:0.800, maxGrowth:Infinity, seedSizeBoostRange:[1,1.6], fruitRange:[1,8], extraVariantBonus:2.10, growthDivisor:3250, secondSpeedBoost:1.60 },
   { id:'broccoli', name:'Broccoli Seed', icon:'🥦', plant:'🥦', rarity:'mythic', hidden:true,
-    price:32500, fruitValue:0.950, maxGrowth:Infinity, seedSizeBoostRange:[1,8.5], fruitRange:[1,13], extraVariantBonus:1.60, growthDivisor:720, secondSpeedBoost:1.10 },
+    price:32500, fruitValue:0.950, maxGrowth:Infinity, seedSizeBoostRange:[1,8.5], fruitRange:[1,13], extraVariantBonus:1.60, growthDivisor:3600, secondSpeedBoost:1.10 },
   { id:'leafygreen', name:'Leafy Green Seed', icon:'🥬', plant:'🥬', rarity:'mythic', hidden:true,
-    price:28750, fruitValue:0.720, maxGrowth:Infinity, seedSizeBoostRange:[1,1.65], fruitRange:[1,40], extraVariantBonus:1.45, growthDivisor:760, secondSpeedBoost:1.35 },
+    price:28750, fruitValue:0.720, maxGrowth:Infinity, seedSizeBoostRange:[1,1.65], fruitRange:[1,40], extraVariantBonus:1.45, growthDivisor:3800, secondSpeedBoost:1.35 },
   { id:'chestnut', name:'Chestnut Seed', icon:'🌰', plant:'🌰', rarity:'legendary', hidden:true,
-    price:25000, fruitValue:0.650, maxGrowth:Infinity, seedSizeBoostRange:[1,5.0], fruitRange:[1,28], extraVariantBonus:1.25, growthDivisor:780, secondSpeedBoost:1.00 },
+    price:25000, fruitValue:0.650, maxGrowth:Infinity, seedSizeBoostRange:[1,5.0], fruitRange:[1,28], extraVariantBonus:1.25, growthDivisor:3900, secondSpeedBoost:1.00 },
   { id:'beanstalk', name:'Beanstalk Seed', icon:'🫛', plant:'🫛', rarity:'mythic', hidden:true,
-    price:550000, fruitValue:1.500, maxGrowth:Infinity, seedSizeBoostRange:[1,20.0], fruitRange:[1,95], extraVariantBonus:2.30, growthDivisor:500, secondSpeedBoost:1.20 },
+    price:550000, fruitValue:1.500, maxGrowth:Infinity, seedSizeBoostRange:[1,20.0], fruitRange:[1,95], extraVariantBonus:2.30, growthDivisor:2500, secondSpeedBoost:1.20 },
   { id:'watermelon', name:'Watermelon Seed', icon:'🍉', plant:'🍉', rarity:'legendary', hidden:true,
-    price:26250, fruitValue:0.700, maxGrowth:Infinity, seedSizeBoostRange:[1,5.5], fruitRange:[1,5], extraVariantBonus:1.20, growthDivisor:820, secondSpeedBoost:1.15 },
+    price:26250, fruitValue:0.700, maxGrowth:Infinity, seedSizeBoostRange:[1,5.5], fruitRange:[1,5], extraVariantBonus:1.20, growthDivisor:4100, secondSpeedBoost:1.15 },
   { id:'banana', name:'Banana Seed', icon:'🍌', plant:'🍌', rarity:'legendary', hidden:true,
-    price:23750, fruitValue:0.300, maxGrowth:Infinity, seedSizeBoostRange:[1,1.3], fruitRange:[1,20], extraVariantBonus:1.15, growthDivisor:900, secondSpeedBoost:1.35 },
+    price:23750, fruitValue:0.300, maxGrowth:Infinity, seedSizeBoostRange:[1,1.3], fruitRange:[1,20], extraVariantBonus:1.15, growthDivisor:4500, secondSpeedBoost:1.35 },
   { id:'mightybamboo', name:'Mighty Bamboo Seed', icon:'🎋', plant:'🎋', rarity:'mythic', hidden:true,
-    price:575000, fruitValue:2.000, maxGrowth:Infinity, seedSizeBoostRange:[1,25.0], fruitRange:[1,20], extraVariantBonus:2.75, growthDivisor:450, secondSpeedBoost:1.50 },
+    price:575000, fruitValue:2.000, maxGrowth:Infinity, seedSizeBoostRange:[1,25.0], fruitRange:[1,20], extraVariantBonus:2.75, growthDivisor:2250, secondSpeedBoost:1.50 },
   { id:'tangerine', name:'Tangerine Seed', icon:'🍊', plant:'🍊', rarity:'legendary', hidden:true,
-    price:22500, fruitValue:0.275, maxGrowth:Infinity, seedSizeBoostRange:[1,1.22], fruitRange:[1,15], extraVariantBonus:1.10, growthDivisor:920, secondSpeedBoost:1.25 },
+    price:22500, fruitValue:0.275, maxGrowth:Infinity, seedSizeBoostRange:[1,1.22], fruitRange:[1,15], extraVariantBonus:1.10, growthDivisor:4600, secondSpeedBoost:1.25 },
   { id:'jackolantern', name:'Jacko Lantern Seed', icon:'🎃', plant:'🎃', rarity:'mythic', hidden:true,
-    price:750000, fruitValue:2.500, maxGrowth:Infinity, seedSizeBoostRange:[1,22.0], fruitRange:[1,30], extraVariantBonus:3.00, growthDivisor:425, secondSpeedBoost:1.35 },
+    price:750000, fruitValue:2.500, maxGrowth:Infinity, seedSizeBoostRange:[1,22.0], fruitRange:[1,30], extraVariantBonus:3.00, growthDivisor:2125, secondSpeedBoost:1.35 },
   { id:'alienlike', name:'Alien Like Seed', icon:'🪬', plant:'🪬', rarity:'mythic', hidden:true,
-    price:875000, fruitValue:3.250, maxGrowth:Infinity, seedSizeBoostRange:[1,30.0], fruitRange:[1,15], extraVariantBonus:4.00, growthDivisor:350, secondSpeedBoost:1.75 },
+    price:875000, fruitValue:3.250, maxGrowth:Infinity, seedSizeBoostRange:[1,30.0], fruitRange:[1,15], extraVariantBonus:4.00, growthDivisor:1750, secondSpeedBoost:1.75 },
   { id:'melon', name:'Melon Seed', icon:'🍈', plant:'🍈', rarity:'legendary', hidden:true,
-    price:23750, fruitValue:0.440, maxGrowth:Infinity, seedSizeBoostRange:[1,1.28], fruitRange:[1,6], extraVariantBonus:1.15, growthDivisor:900, secondSpeedBoost:1.15 },
+    price:23750, fruitValue:0.440, maxGrowth:Infinity, seedSizeBoostRange:[1,1.28], fruitRange:[1,6], extraVariantBonus:1.15, growthDivisor:4500, secondSpeedBoost:1.15 },
   { id:'pineapple', name:'Pineapple Seed', icon:'🍍', plant:'🍍', rarity:'legendary', hidden:true,
-    price:26250, fruitValue:0.650, maxGrowth:Infinity, seedSizeBoostRange:[1,1.4], fruitRange:[1,3], extraVariantBonus:1.25, growthDivisor:800, secondSpeedBoost:1.10 },
+    price:26250, fruitValue:0.650, maxGrowth:Infinity, seedSizeBoostRange:[1,1.4], fruitRange:[1,3], extraVariantBonus:1.25, growthDivisor:4000, secondSpeedBoost:1.10 },
   { id:'lemon', name:'Lemon Seed', icon:'🍋', plant:'🍋', rarity:'legendary', hidden:true,
-    price:21250, fruitValue:0.220, maxGrowth:Infinity, seedSizeBoostRange:[1,1.2], fruitRange:[1,22], extraVariantBonus:1.10, growthDivisor:950, secondSpeedBoost:1.25 },
+    price:21250, fruitValue:0.220, maxGrowth:Infinity, seedSizeBoostRange:[1,1.2], fruitRange:[1,22], extraVariantBonus:1.10, growthDivisor:4750, secondSpeedBoost:1.25 },
   { id:'pear', name:'Pear Seed', icon:'🍐', plant:'🍐', rarity:'legendary', hidden:true,
-    price:22500, fruitValue:0.320, maxGrowth:Infinity, seedSizeBoostRange:[1,2.5], fruitRange:[1,11], extraVariantBonus:1.10, growthDivisor:900, secondSpeedBoost:1.15 },
+    price:22500, fruitValue:0.320, maxGrowth:Infinity, seedSizeBoostRange:[1,2.5], fruitRange:[1,11], extraVariantBonus:1.10, growthDivisor:4500, secondSpeedBoost:1.15 },
   { id:'mango', name:'Mango Seed', icon:'🥭', plant:'🥭', rarity:'legendary', hidden:true,
-    price:25000, fruitValue:0.450, maxGrowth:Infinity, seedSizeBoostRange:[1,4.5], fruitRange:[1,20], extraVariantBonus:1.30, growthDivisor:820, secondSpeedBoost:1.20 },
+    price:25000, fruitValue:0.450, maxGrowth:Infinity, seedSizeBoostRange:[1,4.5], fruitRange:[1,20], extraVariantBonus:1.30, growthDivisor:4100, secondSpeedBoost:1.20 },
   { id:'peach', name:'Peach Seed', icon:'🍑', plant:'🍑', rarity:'legendary', hidden:true,
-    price:18750, fruitValue:0.195, maxGrowth:Infinity, seedSizeBoostRange:[1,20], fruitRange:[1,10], extraVariantBonus:1.20, growthDivisor:1000, secondSpeedBoost:1.00 }
+    price:18750, fruitValue:0.195, maxGrowth:Infinity, seedSizeBoostRange:[1,20], fruitRange:[1,10], extraVariantBonus:1.20, growthDivisor:5000, secondSpeedBoost:1.00 }
 ];
 function seedById(id){ for(var i=0;i<SEED_TYPES.length;i++){ if(SEED_TYPES[i].id===id) return SEED_TYPES[i]; } return null; }
 function isSeedRevealed(seed){ return !seed.hidden || state.mysteryRevealed.indexOf(seed.id) >= 0; }
@@ -1252,8 +1263,8 @@ function renderTutorialSpotlight(){
   document.getElementById('tutorialBubbleText').textContent = step.text;
   document.getElementById('tutorialManualNext').hidden = !step.manual;
   var target = step.getTarget ? step.getTarget() : null;
-  bubble.hidden = false;
   if(target){
+    bubble.hidden = false;
     var r = target.getBoundingClientRect();
     var pad = 8;
     spotlight.style.left = (r.left - pad) + 'px';
@@ -1268,11 +1279,18 @@ function renderTutorialSpotlight(){
     bubble.style.top = bubbleTop + 'px';
     bubble.style.left = bubbleLeft + 'px';
     bubble.style.transform = 'none';
-  } else {
+  } else if(step.manual){
+    // the deliberate final step: no target by design, still show the centered closing bubble
     spotlight.hidden = true;
+    bubble.hidden = false;
     bubble.style.top = '50%';
     bubble.style.left = '50%';
     bubble.style.transform = 'translate(-50%,-50%)';
+  } else {
+    // no target because a mini-game is actively being played (readyBtn/collectBtn don't
+    // exist yet) -- hide the bubble entirely instead of leaving it floating over the game
+    spotlight.hidden = true;
+    bubble.hidden = true;
   }
 }
 window.addEventListener('resize', function(){ if(tutorialActive()) renderTutorialSpotlight(); });
@@ -1494,6 +1512,15 @@ function timerColorFor(seconds){
   return null;
 }
 function sizeMult(seed, growSeconds){ return Math.min(seed.maxGrowth, 1 + growSeconds/(seed.growthDivisor || 1000)); }
+function growthTellerFor(seed){
+  var rate = 1 / (seed.growthDivisor || 1000); // per-second growth fraction
+  if(rate >= 1/10)   return { label:'Sonic Growth', color:'#ff5c5c' };
+  if(rate >= 1/100)  return { label:'Fast Growth',  color:'#7CFC7C' };
+  if(rate >= 1/500)  return { label:'Ok Growth',    color:'#b5b5b5' };
+  if(rate >= 1/1000) return { label:'Mid Growth',   color:'#ffffff' };
+  if(rate >= 1/5000) return { label:'Slow Growth',  color:'#5fb3ff' };
+  return { label:'Daily Growth', color:'#3f5fd6' };
+}
 function rollWeightedLow(min, max){
   var t = Math.pow(Math.random(), 3); // heavily biased toward the low end
   return Math.round(min + t*(max-min));
@@ -2286,13 +2313,15 @@ function renderShop(){
     var owned = state.seeds[seed.id] || 0;
     var afford = state.pixels >= seed.price;
     var maxSizeTxt = seed.maxGrowth === Infinity ? '∞' : (seed.maxGrowth + '×');
+    var gt = growthTellerFor(seed);
     var row = document.createElement('div');
     row.className = 'shopRow';
     row.dataset.seedId = seed.id;
     row.innerHTML =
       '<div class="shopIcon" style="cursor:pointer;"><span style="'+seedColorFilterStyle(seed)+'">'+seed.icon+'</span></div>' +
       '<div class="shopInfo">' +
-        '<div class="rarity r-'+seed.rarity+'">'+seed.rarity.toUpperCase()+'</div>' +
+        '<div class="rarity r-'+seed.rarity+'">'+seed.rarity.toUpperCase()+'</div> ' +
+        '<span class="growthTeller" style="display:inline-block; font-family:\'Press Start 2P\',monospace; font-size:7px; color:'+gt.color+'; margin-bottom:3px; vertical-align:middle;">'+gt.label+'</span>' +
         '<div class="shopName" style="cursor:pointer;'+seedNameColorStyle(seed)+'">'+seedDisplayName(seed)+'</div>' +
         '<div class="shopStats">Fruit base '+fmtMoney(seed.fruitValue)+' &middot; Max Size '+maxSizeTxt+'</div>' +
       '</div>' +
@@ -2801,14 +2830,14 @@ function renderHarvestResult(plant, score, label){
 /* -- 1. Spacebar Clicker -- */
 function gameSpacebar(){
   readyScreen('Press SPACE as many times as you can in 10 seconds! (keyboard only)', function(){
-    var count = 0; var roundStart = performance.now();
+    var count = 0; var roundStart = performance.now(); var roundEndAt = roundStart + 10000;
     gameBody.innerHTML =
       '<div class="gDesc">Mash SPACE!</div>' +
       '<div id="gTimerBar"><div></div></div>' +
       '<div class="gStat" id="cnt">0</div><div class="gSub">presses</div>';
     var bar = gameBody.querySelector('#gTimerBar > div');
     var cntEl = document.getElementById('cnt');
-    var bump = function(){ count++; cntEl.textContent=count; SFX.mgClick(); };
+    var bump = function(){ if(performance.now() >= roundEndAt) return; count++; cntEl.textContent=count; SFX.mgClick(); };
     var onKey = function(e){ if(e.code==='Space' || e.key===' '){ e.preventDefault(); bump(); } };
     window.addEventListener('keydown', onKey);
     armSkip(function(){ return count; });
@@ -2836,7 +2865,7 @@ function buildTypingText(){
 function gameTyping(){
   readyScreen('Type the sentence(s) as accurately as you can in 20 seconds!', function(){
     var text = buildTypingText();
-    var roundStart = performance.now();
+    var roundStart = performance.now(); var roundEndAt = roundStart + 20000;
     gameBody.innerHTML =
       '<div class="typingBox" id="typingDisplay"></div>' +
       '<input id="typingInput" autocomplete="off" spellcheck="false" placeholder="start typing...">' +
@@ -2876,7 +2905,7 @@ function gameTyping(){
         } else {
           SFX.mgClick();
           correctStreak++;
-          comboScore += (correctStreak >= 10) ? 2 : 1; // 2x per character once you've hit a 10-streak
+          if(performance.now() < roundEndAt){ comboScore += (correctStreak >= 10) ? 2 : 1; } // 2x per character once you've hit a 10-streak; nothing counts past the real round end
         }
       } else {
         SFX.mgClick();
@@ -2907,7 +2936,7 @@ function gameTyping(){
 /* -- 3. Mouse Speed Test -- */
 function gameMouse(){
   readyScreen(moveHintPhrase().replace(/^./, function(c){ return c.toUpperCase(); }) + ' as much as possible in 10 seconds!', function(){
-    var dist = 0, lastX=null, lastY=null; var roundStart = performance.now();
+    var dist = 0, lastX=null, lastY=null; var roundStart = performance.now(); var roundEndAt = roundStart + 10000;
     gameBody.innerHTML =
       '<div class="clickArea" id="mouseArea">🖱️ '+(inputMode==='touch' ? 'DRAG HERE!' : 'MOVE HERE!')+'</div>' +
       '<div id="gTimerBar"><div></div></div>' +
@@ -2917,6 +2946,7 @@ function gameMouse(){
     var distStat = document.getElementById('distStat');
     var lastHundreds = 0;
     var addDist = function(d){
+      if(performance.now() >= roundEndAt) return;
       dist += d;
       distStat.textContent = Math.round(dist);
       var hundreds = Math.floor(dist/100);
@@ -3015,7 +3045,7 @@ function gameReaction(){
 /* -- 5. CPS -- */
 function gameCPS(){
   readyScreen(actionPhrase().replace(/^./, function(c){ return c.toUpperCase(); }) + ' as fast as you can in 10 seconds!', function(){
-    var count = 0; var roundStart = performance.now();
+    var count = 0; var roundStart = performance.now(); var roundEndAt = roundStart + 10000;
     gameBody.innerHTML =
       '<div class="clickArea" id="cpsArea">👆 '+(inputMode==='touch' ? 'TAP!' : 'CLICK!')+'</div>' +
       '<div id="gTimerBar"><div></div></div>' +
@@ -3023,7 +3053,7 @@ function gameCPS(){
     var area = document.getElementById('cpsArea');
     var bar = gameBody.querySelector('#gTimerBar > div');
     var cntEl = document.getElementById('cpsCnt');
-    var onClick = function(){ count++; cntEl.textContent = count; SFX.mgClick(); };
+    var onClick = function(){ if(performance.now() >= roundEndAt) return; count++; cntEl.textContent = count; SFX.mgClick(); };
     var onTouch = function(e){ e.preventDefault(); onClick(); };
     area.addEventListener('click', onClick);
     area.addEventListener('touchstart', onTouch, {passive:false});
@@ -3046,7 +3076,7 @@ function gameCPS(){
 /* -- 6. Jitter Test -- */
 function gameJitter(){
   readyScreen((inputMode==='touch' ? 'Tap rapidly' : 'Press any key rapidly') + (gamepadConnected ? ', or mash R2,' : '') + ' in 10 seconds!', function(){
-    var count = 0; var roundStart = performance.now();
+    var count = 0; var roundStart = performance.now(); var roundEndAt = roundStart + 10000;
     gameBody.innerHTML =
       '<div class="clickArea" id="jitArea">⌨️ '+(inputMode==='touch' ? 'TAP!' : 'MASH!')+'</div>' +
       '<div id="gTimerBar"><div></div></div>' +
@@ -3054,7 +3084,7 @@ function gameJitter(){
     var area = document.getElementById('jitArea');
     var bar = gameBody.querySelector('#gTimerBar > div');
     var cntEl = document.getElementById('jitCnt');
-    var bump = function(){ count++; cntEl.textContent = count; SFX.mgClick(); };
+    var bump = function(){ if(performance.now() >= roundEndAt) return; count++; cntEl.textContent = count; SFX.mgClick(); };
     var onKey = function(e){ if(e.repeat) return; bump(); };
     var onTouch = function(e){ e.preventDefault(); bump(); };
     window.addEventListener('keydown', onKey);
@@ -3112,8 +3142,9 @@ function gameNumStop(){
 
 /* -- 8. Dot Swiper -- */
 function gameDotSwiper(){
-  readyScreen('Swipe the green dots the instant they appear — just '+moveHintPhrase()+' over them, no '+(inputMode==='touch'?'tapping':'clicking')+' needed! 10 seconds!', function(){
-    var score = 0, timeLeft = 10;
+  readyScreen('Swipe The Dots, no clicking needed!', function(){
+    var score = 0;
+    var roundStart = performance.now(); var roundEndAt = roundStart + 10000;
     gameBody.innerHTML =
       '<div class="clickArea dotArea" id="dotArea"></div>' +
       '<div id="gTimerBar"><div></div></div>' +
@@ -3123,7 +3154,7 @@ function gameDotSwiper(){
     var scoreEl = document.getElementById('dotScore');
     var activeDots = [];
     var DOT_LIFETIME = 1000; // ms a dot lingers before vanishing unswiped (1 full second)
-    var DOT_RADIUS = 22; // px proximity needed to count as "touched"
+    var DOT_RADIUS = 33; // px proximity needed to count as "touched" (1.5x the old 22px, matching the bigger dot)
     var SWIPE_ANIM_MS = 250; // must match the .dotSwiperDot.swiped CSS animation duration
 
     function removeDot(dot){
@@ -3149,6 +3180,7 @@ function gameDotSwiper(){
       activeDots.push(dot);
     }
     function trySwipeAt(px, py){
+      if(performance.now() >= roundEndAt) return;
       var rect = area.getBoundingClientRect();
       var lx = px - rect.left, ly = py - rect.top;
       activeDots.slice().forEach(function(dot){
@@ -3162,6 +3194,7 @@ function gameDotSwiper(){
           clearTimeout(dot.expireTimer);
           dot.el.classList.add('swiped'); // flashes white then fades, see CSS
           setTimeout(function(){ removeDot(dot); }, SWIPE_ANIM_MS);
+          spawnDot(); // a fresh dot appears immediately, on top of the regular spawn interval
         }
       });
     }
@@ -3195,7 +3228,6 @@ function gameDotSwiper(){
     }
     armSkip(function(){ return score; });
     spawnDot();
-    var roundStart = performance.now();
     var spawnInterval = setInterval(spawnDot, 250);
     var interval = setInterval(function(){
       var timeLeft = Math.max(0, (10000 - (performance.now() - roundStart)) / 1000); // wall-clock based so lag can't stretch the round
@@ -3221,7 +3253,7 @@ function gameDotSwiper(){
 /* -- 9. Dot Reaction -- */
 function gameDotReaction(){
   readyScreen('Green dot = '+actionPhrase()+' it fast! Red dot = leave it alone! 10 seconds!', function(){
-    var score = 0, roundOver = false; var roundStart = performance.now();
+    var score = 0, roundOver = false; var roundStart = performance.now(); var roundEndAt = roundStart + 10000;
     gameBody.innerHTML =
       '<div class="clickArea dotArea dotReactionArea" id="reactArea"></div>' +
       '<div id="gTimerBar"><div></div></div>' +
@@ -3232,6 +3264,7 @@ function gameDotReaction(){
     var DOT_SIZE = 90; // 3x Dot Swiper's 30px dots
     var DOT_LIFE = 1000; // ms — timer counts down from 1.0 to 0.0
     var current = null;
+    var greenStreak = 0; // 5+ green dots in a row (no misses, no red clicks) -> 1.5x per green after that
 
     function bump(delta){ score += delta; scoreEl.textContent = score; }
     function clearCurrent(){
@@ -3241,12 +3274,27 @@ function gameDotReaction(){
       if(current.el.parentNode) current.el.parentNode.removeChild(current.el);
       current = null;
     }
+    function showMissText(x, y){
+      var el = document.createElement('div');
+      el.className = 'reactMissText';
+      el.textContent = '-10 ball missed';
+      el.style.left = x+'px'; el.style.top = y+'px';
+      area.appendChild(el);
+      setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 1000);
+    }
     function onDotClick(){
-      if(!current || roundOver) return;
+      if(!current || roundOver || performance.now() >= roundEndAt) return;
       var wasGreen = current.color === 'green';
-      if(wasGreen){ SFX.disappear(); } else { SFX.error(); }
+      if(wasGreen){
+        SFX.disappear();
+        greenStreak++;
+        bump(greenStreak >= 5 ? 15 : 10); // 1.5x once you've landed 5+ greens in a row
+      } else {
+        SFX.error();
+        greenStreak = 0;
+        bump(-10);
+      }
       clearCurrent();
-      bump(wasGreen ? 10 : -10);
       spawnDot();
     }
     function spawnDot(){
@@ -3280,8 +3328,13 @@ function gameDotReaction(){
       current.expireTimer = setTimeout(function(){
         var wasGreen = color === 'green';
         clearCurrent();
-        if(wasGreen) bump(-10); // missed a green dot in time; red expiring unclicked is the correct play, no penalty
-        spawnDot();
+        if(wasGreen && performance.now() < roundEndAt){
+          greenStreak = 0;
+          bump(-10);
+          SFX.error();
+          showMissText(x, y);
+        } // red expiring unclicked is the correct play -- no penalty, streak untouched
+        if(!roundOver) spawnDot();
       }, DOT_LIFE);
       el.addEventListener('click', onDotClick);
       el.addEventListener('touchstart', function(e){ e.preventDefault(); onDotClick(); }, {passive:false});
@@ -3306,10 +3359,9 @@ function gameDotReaction(){
 
 /* -- 10. Follow The Ball -- */
 function gameFollowBall(){
-  var moveWord = inputMode==='touch' ? 'finger' : 'mouse';
   var extra = gamepadConnected ? ' (or push a stick)' : '';
-  readyScreen('Keep your '+moveWord+extra+' on the ball as it bounces around! It turns red when you lose it. 10 seconds!', function(){
-    var score = 0; var roundStart = performance.now();
+  readyScreen('Keep your mouse on the ball'+extra+'! It turns red when you lose it, and pink if you keep it 4+ seconds straight. 10 seconds!', function(){
+    var score = 0; var roundStart = performance.now(); var roundEndAt = roundStart + 10000;
     gameBody.innerHTML =
       '<div class="clickArea followBallArea" id="followArea"><div class="followBall" id="followBall"></div></div>' +
       '<div id="gTimerBar"><div></div></div>' +
@@ -3362,6 +3414,7 @@ function gameFollowBall(){
 
     function frame(now){
       if(roundOver) return;
+      now = Math.min(now, roundEndAt); // freeze scoring/movement math right at the true round end, even if this frame ran late
       var dt = Math.min(0.05, (now - lastFrame)/1000);
       lastFrame = now;
       var r = area.getBoundingClientRect();
@@ -3380,16 +3433,18 @@ function gameFollowBall(){
       if(onTarget){
         if(streakStartMs === null){ streakStartMs = now; lastAwardTicks = 0; }
         var streakElapsed = now - streakStartMs;
+        ball.classList.toggle('pinkStreak', streakElapsed >= 4000);
         var ticks = Math.floor(streakElapsed/TICK_MS);
         while(lastAwardTicks < ticks){
           lastAwardTicks++;
           var secondIndex = Math.floor((lastAwardTicks*TICK_MS)/1000); // 0 for the 1st second of the streak, 1+ for every second after
-          score += (secondIndex === 0 ? 1 : 2); // jumps to 2x after the 1st second, but caps there -- no further stacking
+          score += (secondIndex === 0 ? 1 : 1.5); // jumps to 1.5x after the 1st second, but caps there -- no further stacking
           scoreEl.textContent = score;
           SFX.mgClick();
         }
       } else {
         streakStartMs = null; // lost the ball -- next streak starts back at the base rate
+        ball.classList.remove('pinkStreak');
       }
       raf = requestAnimationFrame(frame);
     }
@@ -3418,13 +3473,22 @@ function gameFollowBall(){
 
 /* -- 11. Click Speed Test -- */
 function reactionMsToMult(ms){
-  if(ms > 400) return 0; // too slow -- no reward
-  var raw = 300 - (ms - 1) * (100/99); // 1ms -> 300x, 100ms -> 200x, linear from there
-  return Math.max(2, raw); // a fast-ish click (<=400ms) never rounds down to nothing
+  // piecewise-linear: 1ms->300x, 100ms->100x, 200ms->80x, 300ms->60x, 400ms->40x, 500ms->20x, 600ms+->2x flat
+  var points = [[1,300],[100,100],[200,80],[300,60],[400,40],[500,20],[600,2]];
+  if(ms >= 600) return 2;
+  if(ms <= 1) return 300;
+  for(var i=0;i<points.length-1;i++){
+    var a = points[i], b = points[i+1];
+    if(ms >= a[0] && ms <= b[0]){
+      var t = (ms - a[0]) / (b[0] - a[0]);
+      return a[1] + t*(b[1]-a[1]);
+    }
+  }
+  return 2;
 }
 function gameClickSpeed(){
-  readyScreen('Click as fast as you can, over and over — the game measures the gap between each of your clicks! 10 seconds!', function(){
-    var roundStart = performance.now();
+  readyScreen('Click as fast as you can in 10 seconds!', function(){
+    var roundStart = performance.now(); var roundEndAt = roundStart + 10000;
     var lastClickAt = null;
     var bestMs = Infinity;
     gameBody.innerHTML =
@@ -3437,6 +3501,7 @@ function gameClickSpeed(){
     var bestLbl = document.getElementById('clickSpeedBestLbl');
     function registerClick(){
       var now = performance.now();
+      if(now >= roundEndAt) return;
       SFX.mgClick();
       if(lastClickAt !== null){
         var gap = Math.max(1, Math.round(now - lastClickAt));
