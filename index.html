@@ -3539,6 +3539,10 @@ function start(hotData){
     // the artifact's hot-reload snapshot survives a plain reload and would otherwise
     // resurrect the old (just-deleted) save the instant the page comes back up
     try{ window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(defaultState()); }catch(e){}
+    // null out state BEFORE reloading -- otherwise the pagehide/beforeunload/visibilitychange
+    // handlers below fire during the reload and persist() writes the old in-memory state
+    // right back into localStorage, silently undoing the reset we just did
+    state = null;
     location.reload();
   });
   resetOverlay.addEventListener('click', function(e){ if(e.target === resetOverlay){ resetOverlay.hidden = true; } });
@@ -3716,6 +3720,7 @@ function start(hotData){
       localStorage.setItem(SAVE_KEY, JSON.stringify(pendingImportData));
       localStorage.setItem(SAVE_KEY_BACKUP, JSON.stringify(pendingImportData));
       try{ window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(pendingImportData); }catch(e){}
+      state = null; // see the same note in resetYesBtn -- prevents the outgoing persist() from clobbering the import
       location.reload();
     }catch(e){ toast('Could not import save.'); }
   });
