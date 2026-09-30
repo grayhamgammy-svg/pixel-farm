@@ -1573,7 +1573,7 @@ function loadState(hotData){
   if(!s.night) s.night = { isNight:false, type:null, endsAt:Date.now()+DAY_LENGTH, rollAt:0 };
   return s;
 }
-function persist(){
+function persist(forceCloud){
   state.lastSeen = Date.now();
   try{
     // keep one save cycle behind as a backup before overwriting the primary, so a write
@@ -1584,7 +1584,10 @@ function persist(){
     localStorage.setItem(SAVE_KEY, JSON.stringify(state));
   }catch(e){}
   try{ window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(state); }catch(e){}
-  try{ syncToCloud(false); }catch(e){}
+  // force an immediate cloud sync by default -- a real player action (harvest, buy, plant, etc.)
+  // must never be lost to the throttle if the page reloads a moment later. Only the passive
+  // once-a-second growthTick ticker explicitly opts out by passing persist(false).
+  try{ syncToCloud(forceCloud !== false); }catch(e){}
 }
 
 /* Advance every plant's growth timer by however long the page was closed. */
@@ -2308,7 +2311,7 @@ function growthTick(){
     pl.growSeconds += (seed && seed.secondSpeedBoost) || 1; // weather only affects trees on the plot
   });
   weatherMutationTick();
-  persist();
+  persist(false); // passive per-second tick -- fine to stay on the throttle, unlike real player actions
   renderAll();
 }
 
