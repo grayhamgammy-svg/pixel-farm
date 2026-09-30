@@ -3895,7 +3895,7 @@ function start(hotData){
 
   var resetOverlay = document.getElementById('resetOverlay');
   document.getElementById('logoutBtn').addEventListener('click', function(){ SFX.click(); logoutAccount(); });
-  document.getElementById('backToAppsBtn').addEventListener('click', function(){ SFX.click(); exitToAppPicker(); });
+  document.getElementById('backToAppsBtn').addEventListener('click', function(){ playBackSfx(); exitToAppPicker(); });
   document.getElementById('changePasswordBtn').addEventListener('click', function(){ SFX.click(); openChangePasswordFlow(); });
   document.getElementById('sessionReconnectBtn').addEventListener('click', function(){
     SFX.click();
@@ -4394,6 +4394,7 @@ function resumeAfterReconnect(){
   });
 }
 function logoutAccount(){
+  stopLobbyMusic();
   try{ if(sessionUnsub) sessionUnsub(); }catch(e){}
   try{ if(fbAuth) fbAuth.signOut(); }catch(e){}
   location.reload();
@@ -4401,6 +4402,33 @@ function logoutAccount(){
 
 var pendingLoadedState = null;
 var gameStarted = false;
+
+var SFX_RATES = [0.9, 1, 1.1];
+function randomSfxRate(){ return SFX_RATES[rand(0, SFX_RATES.length - 1)]; }
+function playPickSfx(){ try{ var a = new Audio('sfx-pick.mp3'); a.playbackRate = randomSfxRate(); a.play().catch(function(){}); }catch(e){} }
+function playBackSfx(){ try{ var a = new Audio('sfx-back.mp3'); a.playbackRate = randomSfxRate(); a.play().catch(function(){}); }catch(e){} }
+function playDeleteSfx(){ try{ var a = new Audio('sfx-delete.mp3'); a.playbackRate = randomSfxRate(); a.play().catch(function(){}); }catch(e){} }
+
+var lobbyAudio = null;
+function startLobbyMusic(){
+  stopLobbyMusic();
+  lobbyAudio = new Audio('sfx-lobby.m4a');
+  lobbyAudio.playbackRate = randomSfxRate();
+  lobbyAudio.onended = function(){
+    if(lobbyAudio){
+      lobbyAudio.playbackRate = randomSfxRate();
+      lobbyAudio.currentTime = 0;
+      lobbyAudio.play().catch(function(){});
+    }
+  };
+  lobbyAudio.play().catch(function(){});
+}
+function stopLobbyMusic(){
+  if(lobbyAudio){
+    try{ lobbyAudio.onended = null; lobbyAudio.pause(); lobbyAudio.currentTime = 0; }catch(e){}
+    lobbyAudio = null;
+  }
+}
 
 function beginGameWithState(loadedStateObj){
   ['authLoadingScreen','authHomeScreen','authSignupScreen','authLoginScreen'].forEach(function(s){
@@ -4412,8 +4440,10 @@ function beginGameWithState(loadedStateObj){
 function showAppPicker(){
   document.getElementById('appPickerScreen').hidden = false;
   document.getElementById('app').hidden = true;
+  startLobbyMusic();
 }
 function enterSeedAndWaitGame(){
+  stopLobbyMusic();
   document.getElementById('appPickerScreen').hidden = true;
   document.getElementById('app').hidden = false;
   if(!gameStarted){
@@ -4564,8 +4594,8 @@ function initAuthUI(){
   document.getElementById('authGoLogin').addEventListener('click', function(){ showAuthScreen('authLoginScreen'); });
   document.getElementById('authSignupBack').addEventListener('click', function(){ showAuthScreen('authHomeScreen'); });
   document.getElementById('authLoginBack').addEventListener('click', function(){ showAuthScreen('authHomeScreen'); });
-  document.getElementById('appTileSeedWait').addEventListener('click', function(){ SFX.click(); enterSeedAndWaitGame(); });
-  document.getElementById('appTileSoundPlay').addEventListener('click', function(){ SFX.click(); window.location.href = 'soundplay/index.html'; });
+  document.getElementById('appTileSeedWait').addEventListener('click', function(){ playPickSfx(); enterSeedAndWaitGame(); });
+  document.getElementById('appTileSoundPlay').addEventListener('click', function(){ playPickSfx(); stopLobbyMusic(); window.location.href = 'soundplay/index.html'; });
   document.getElementById('appPickerLogoutBtn').addEventListener('click', function(){ logoutAccount(); });
 
   document.getElementById('authGenderF').addEventListener('click', function(){

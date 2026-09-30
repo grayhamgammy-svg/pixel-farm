@@ -199,6 +199,7 @@ function randomRate(){ var r = [0.9, 1, 1.1]; return r[Math.floor(Math.random()*
 /* ---- shared sound effects borrowed from Seed & Wait ---- */
 function playGreenSfx(){ try{ var a = new Audio('../sfx-green.mp3'); a.playbackRate = randomRate(); a.play().catch(function(){}); }catch(e){} }
 function playAppearSfx(){ try{ new Audio('../sfx-appear.mp3').play().catch(function(){}); }catch(e){} }
+function playDeleteSfx(){ try{ var a = new Audio('../sfx-delete.mp3'); a.playbackRate = randomRate(); a.play().catch(function(){}); }catch(e){} }
 
 function docRef(){ return fbDb.collection('soundplayConfigs').doc(currentUid); }
 function soundsRef(){ return docRef().collection('sounds'); }
@@ -270,6 +271,7 @@ function renderWordList(){
       config.words = config.words.filter(function(x){ return x.id !== w.id; });
       saveWords();
       renderWordList();
+      playDeleteSfx();
     });
     el.appendChild(row);
   });
@@ -428,6 +430,7 @@ function deleteSound(s){
   saveWords();
   renderSoundList();
   renderWordList();
+  playDeleteSfx();
   soundsRef().doc(s.id)['delete']().catch(function(){});
 }
 
