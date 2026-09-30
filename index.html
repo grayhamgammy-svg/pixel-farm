@@ -949,16 +949,14 @@ if('serviceWorker' in navigator){
   }
   .authTitleSmall{ font-size:14px; margin-bottom:8px; }
   .authHomeButtons{ display:flex; flex-direction:column; gap:12px; width:100%; margin-top:26px; }
-  .authTopRow{
-    display:flex; align-items:center; justify-content:center; gap:24px;
-    width:100%; flex-wrap:wrap;
-  }
-  .authTitleBlock{ flex:1; min-width:220px; display:flex; flex-direction:column; align-items:flex-start; }
-  .authTitleBlock .authTitle{ text-align:left; }
   .authPreviewBox{
-    flex:none; width:180px; height:180px; position:relative;
+    position:absolute; top:50%; right:40px; transform:translateY(-50%);
+    width:200px; height:200px; z-index:2;
     border:4px solid var(--panel-edge); border-radius:14px; overflow:hidden;
     box-shadow:0 6px 0 rgba(0,0,0,.4); background:#000;
+  }
+  @media (max-width: 760px){
+    .authPreviewBox{ display:none; } /* not enough room next to the centered card on narrow screens */
   }
   .authBtn{
     font-family:'Press Start 2P', monospace; font-size:13px;
@@ -1003,40 +1001,29 @@ if('serviceWorker' in navigator){
 <div id="authLoadingScreen" class="authScreen">
   <div class="authBg"></div>
   <div class="authOverlay">
-    <div class="authTopRow">
-      <div class="authTitleBlock">
-        <div class="authTitle">🌾 SEED & WAIT</div>
-        <div class="authLoadingText">Loading...</div>
-      </div>
-      <div class="authPreviewBox" data-authpreview></div>
-    </div>
+    <div class="authTitle">🌾 SEED & WAIT</div>
+    <div class="authLoadingText">Loading...</div>
   </div>
 </div>
 
 <div id="authHomeScreen" class="authScreen" hidden>
   <div class="authBg"></div>
+  <div class="authPreviewBox" data-authpreview></div>
   <div class="authOverlay">
-    <div class="authTopRow">
-      <div class="authTitleBlock">
-        <div class="authTitle">🌾 SEED & WAIT</div>
-        <div class="authHomeButtons">
-          <button class="authBtn authBtnWhite" id="authGoSignup">Sign Up</button>
-          <button class="authBtn authBtnDark" id="authGoLogin">Log In</button>
-        </div>
-      </div>
-      <div class="authPreviewBox" data-authpreview></div>
+    <div class="authTitle">🌾 SEED & WAIT</div>
+    <div class="authHomeButtons">
+      <button class="authBtn authBtnWhite" id="authGoSignup">Sign Up</button>
+      <button class="authBtn authBtnDark" id="authGoLogin">Log In</button>
     </div>
   </div>
 </div>
 
 <div id="authSignupScreen" class="authScreen" hidden>
   <div class="authBg"></div>
+  <div class="authPreviewBox" data-authpreview></div>
   <div class="authOverlay">
     <button class="authBack" id="authSignupBack">← Back</button>
-    <div class="authTopRow">
-      <div class="authTitleBlock"><div class="authTitle authTitleSmall">🌾 SEED & WAIT</div></div>
-      <div class="authPreviewBox" data-authpreview></div>
-    </div>
+    <div class="authTitle authTitleSmall">🌾 SEED & WAIT</div>
     <div class="authCard">
       <div class="authFieldLabel">Birthday</div>
       <div class="authBirthdayRow">
@@ -1061,12 +1048,10 @@ if('serviceWorker' in navigator){
 
 <div id="authLoginScreen" class="authScreen" hidden>
   <div class="authBg"></div>
+  <div class="authPreviewBox" data-authpreview></div>
   <div class="authOverlay">
     <button class="authBack" id="authLoginBack">← Back</button>
-    <div class="authTopRow">
-      <div class="authTitleBlock"><div class="authTitle authTitleSmall">Log Into Seed & Wait</div></div>
-      <div class="authPreviewBox" data-authpreview></div>
-    </div>
+    <div class="authTitle authTitleSmall">Log Into Seed & Wait</div>
     <div class="authCard">
       <div class="authFieldLabel">Username</div>
       <input type="text" id="authLoginUsername" autocomplete="off" placeholder="Username">
@@ -2785,8 +2770,12 @@ function openChangePasswordFlow(){
       user.reauthenticateWithCredential(cred).then(function(){
         return user.updatePassword(next);
       }).then(function(){
+        var now = Date.now();
+        myPasswordChangedAtSeen = now; // exempt this session before the write comes back through our own listener
+        return fbDb.collection('saves').doc(currentUid).set({ passwordChangedAt: now }, { merge:true });
+      }).then(function(){
         SFX.buy();
-        toast('Password updated!');
+        toast('Password updated! Any other device using this account will be logged out.');
         customizeOverlay.hidden = true;
       }).catch(function(err){
         if(err && (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential')){ errEl.textContent = 'Current password is incorrect.'; }
@@ -3865,7 +3854,7 @@ function start(hotData){
     var btn = document.getElementById('sessionReconnectBtn');
     if(btn.disabled) return;
     btn.disabled = true;
-    var remaining = 8;
+    var remaining = 20;
     btn.textContent = 'RECONNECTING... ' + remaining + 's';
     var countdown = setInterval(function(){
       remaining--;
@@ -4302,12 +4291,28 @@ function claimSession(){
     }, { merge:true }).catch(function(){});
   }catch(e){}
 }
+var myPasswordChangedAtSeen = 0;
+function forceLogoutForPasswordChange(){
+  try{ if(sessionUnsub) sessionUnsub(); }catch(e){}
+  try{ if(fbAuth) fbAuth.signOut(); }catch(e){}
+  toast('Your password was changed elsewhere -- please log in again.');
+  setTimeout(function(){ location.reload(); }, 900);
+}
 function watchSession(){
   if(!currentUid || !fbDb) return;
   try{
     sessionUnsub = fbDb.collection('saves').doc(currentUid).onSnapshot(function(doc){
       if(!doc.exists) return;
       var data = doc.data();
+      if(typeof data.passwordChangedAt === 'number'){
+        if(myPasswordChangedAtSeen === 0){
+          myPasswordChangedAtSeen = data.passwordChangedAt; // first read just sets the baseline, no logout
+        } else if(data.passwordChangedAt > myPasswordChangedAtSeen){
+          myPasswordChangedAtSeen = data.passwordChangedAt;
+          forceLogoutForPasswordChange();
+          return;
+        }
+      }
       var active = data.activeSession;
       if(active && active.sessionId && active.sessionId !== mySessionId && !sessionPaused){
         pauseForOtherSession();
