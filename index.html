@@ -119,6 +119,13 @@ if('serviceWorker' in navigator){
     box-shadow:0 3px 0 var(--panel-edge);
   }
   #logoutBtn:active{ transform:translateY(2px); box-shadow:none; }
+  #backToAppsBtn{
+    font-family:'Press Start 2P', monospace; font-size:12px;
+    background:var(--panel); color:var(--wood-text); border:2px solid var(--panel-edge);
+    border-radius:6px; width:28px; height:28px; cursor:pointer;
+    box-shadow:0 3px 0 var(--panel-edge);
+  }
+  #backToAppsBtn:active{ transform:translateY(2px); box-shadow:none; }
   #abilitySecretBtn{
     position:absolute; left:6px; top:50%; transform:translateY(-50%);
     font-size:18px; line-height:1; cursor:pointer; z-index:30;
@@ -715,6 +722,7 @@ if('serviceWorker' in navigator){
       <button id="deleteModeBtn" title="Delete plants">🗑</button>
       <button id="settingsBtn" title="Settings">⚙️</button>
       <button id="logoutBtn" title="Log out">🚪</button>
+      <button id="backToAppsBtn" title="Back to apps">↩️</button>
     </div>
     <div id="shopBtn"><span class="cart">🛒</span>SHOP</div>
   </div>
@@ -958,6 +966,24 @@ if('serviceWorker' in navigator){
   @media (max-width: 760px){
     .authPreviewBox{ display:none; } /* not enough room next to the centered card on narrow screens */
   }
+  .appGrid{
+    display:flex; flex-wrap:wrap; justify-content:center; gap:28px;
+    width:100%; margin-top:30px;
+  }
+  .appTile{
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    width:110px; cursor:pointer; background:none; border:none;
+  }
+  .appTileIcon{
+    width:84px; height:84px; border-radius:20px;
+    border:3px solid var(--panel-edge); box-shadow:0 5px 0 rgba(0,0,0,.4);
+    transition:transform .1s;
+  }
+  .appTile:active .appTileIcon{ transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,.4); }
+  .appTileName{
+    font-family:'Press Start 2P', monospace; font-size:9px; color:#fff;
+    text-align:center; text-shadow:0 2px 0 #000; line-height:1.4;
+  }
   .authBtn{
     font-family:'Press Start 2P', monospace; font-size:13px;
     border:none; border-radius:10px; padding:16px; cursor:pointer; width:100%;
@@ -1060,6 +1086,24 @@ if('serviceWorker' in navigator){
       <div class="authError" id="authLoginError" hidden></div>
       <button class="authBtn authBtnWhite authSubmitBtn" id="authLoginSubmit" disabled>Log In</button>
     </div>
+  </div>
+</div>
+
+<div id="appPickerScreen" class="authScreen" hidden>
+  <div class="authBg"></div>
+  <div class="authOverlay" style="max-width:520px;">
+    <div class="authTitle" style="font-size:16px; text-align:center;">Pick an app to play!</div>
+    <div class="appGrid">
+      <div class="appTile" id="appTileSeedWait">
+        <img class="appTileIcon" src="icon-192.png" alt="Seed &amp; Wait">
+        <div class="appTileName">Seed & Wait</div>
+      </div>
+      <div class="appTile" id="appTileSoundPlay">
+        <img class="appTileIcon" src="soundplay-icon-192.png" alt="Sound Play Listener">
+        <div class="appTileName">Sound Play Listener</div>
+      </div>
+    </div>
+    <button class="authBtn authBtnDark" id="appPickerLogoutBtn" style="margin-top:34px;">Log Out</button>
   </div>
 </div>
 
@@ -3851,6 +3895,7 @@ function start(hotData){
 
   var resetOverlay = document.getElementById('resetOverlay');
   document.getElementById('logoutBtn').addEventListener('click', function(){ SFX.click(); logoutAccount(); });
+  document.getElementById('backToAppsBtn').addEventListener('click', function(){ SFX.click(); exitToAppPicker(); });
   document.getElementById('changePasswordBtn').addEventListener('click', function(){ SFX.click(); openChangePasswordFlow(); });
   document.getElementById('sessionReconnectBtn').addEventListener('click', function(){
     SFX.click();
@@ -4354,12 +4399,39 @@ function logoutAccount(){
   location.reload();
 }
 
+var pendingLoadedState = null;
+var gameStarted = false;
+
 function beginGameWithState(loadedStateObj){
-  showAuthScreen(null);
   ['authLoadingScreen','authHomeScreen','authSignupScreen','authLoginScreen'].forEach(function(s){
     document.getElementById(s).hidden = true;
   });
-  start(loadedStateObj);
+  pendingLoadedState = loadedStateObj;
+  showAppPicker();
+}
+function showAppPicker(){
+  document.getElementById('appPickerScreen').hidden = false;
+  document.getElementById('app').hidden = true;
+}
+function enterSeedAndWaitGame(){
+  document.getElementById('appPickerScreen').hidden = true;
+  document.getElementById('app').hidden = false;
+  if(!gameStarted){
+    gameStarted = true;
+    start(pendingLoadedState);
+    return;
+  }
+  // returning from the picker -- the farm was "offline" the whole time we were away, so
+  // compute growth for that gap exactly like reopening a closed tab would
+  var elapsed = computeOfflineElapsed();
+  if(elapsed >= 2){ applyOfflineGrowth(elapsed); }
+  renderAll();
+  if(!growthTickInterval){ growthTickInterval = setInterval(growthTick, 1000); }
+}
+function exitToAppPicker(){
+  if(growthTickInterval){ clearInterval(growthTickInterval); growthTickInterval = null; }
+  try{ persist(true); }catch(e){} // force a final sync before leaving so nothing done in the last moment is lost
+  showAppPicker();
 }
 
 function syncToCloud(force){
@@ -4483,6 +4555,9 @@ function initAuthUI(){
   document.getElementById('authGoLogin').addEventListener('click', function(){ showAuthScreen('authLoginScreen'); });
   document.getElementById('authSignupBack').addEventListener('click', function(){ showAuthScreen('authHomeScreen'); });
   document.getElementById('authLoginBack').addEventListener('click', function(){ showAuthScreen('authHomeScreen'); });
+  document.getElementById('appTileSeedWait').addEventListener('click', function(){ enterSeedAndWaitGame(); });
+  document.getElementById('appTileSoundPlay').addEventListener('click', function(){ window.location.href = 'soundplay/index.html'; });
+  document.getElementById('appPickerLogoutBtn').addEventListener('click', function(){ logoutAccount(); });
 
   document.getElementById('authGenderF').addEventListener('click', function(){
     selectedGender = 'female';

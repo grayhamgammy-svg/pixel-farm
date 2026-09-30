@@ -1,0 +1,418 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sound Play Listener</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+<style>
+  :root{
+    --panel:#4a3320; --panel-2:#3a2717; --panel-edge:#241608; --wood-text:#f6e9d2;
+    --gold:#ffd45c; --gold-dark:#c98a1c; --ink:#241608; --green-glow:#7CFC7C; --danger:#e0564a;
+    font-family:'VT323', monospace;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    background:linear-gradient(160deg,#2a1f14,#1a1410 60%,#0f0c08);
+    color:var(--wood-text); min-height:100%; padding:16px; -webkit-tap-highlight-color:transparent;
+  }
+  #topbar{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    max-width:700px; margin:0 auto 18px;
+  }
+  #topbar h1{
+    font-family:'Press Start 2P', monospace; font-size:14px; color:#fff;
+    text-shadow:0 2px 0 #000; margin:0;
+  }
+  #backLink{
+    font-family:'Press Start 2P', monospace; font-size:9px; color:var(--wood-text);
+    background:var(--panel); border:2px solid var(--panel-edge); border-radius:6px;
+    padding:8px 10px; text-decoration:none; box-shadow:0 3px 0 var(--panel-edge);
+  }
+  #main{ max-width:700px; margin:0 auto; }
+  .card{
+    background:var(--panel); border:3px solid var(--panel-edge); border-radius:12px;
+    padding:16px; margin-bottom:16px; box-shadow:0 6px 0 rgba(0,0,0,.35);
+  }
+  .card h2{ font-family:'Press Start 2P', monospace; font-size:11px; margin:0 0 12px; color:var(--gold); }
+  #authGate{ text-align:center; padding:30px 16px; }
+  #authGate p{ font-size:18px; line-height:1.5; }
+  .row{
+    display:flex; align-items:center; gap:8px; background:var(--panel-2);
+    border:2px solid var(--panel-edge); border-radius:8px; padding:8px 10px; margin-bottom:8px;
+  }
+  .row input[type=text]{
+    flex:1; min-width:0; font-family:'VT323', monospace; font-size:18px; padding:6px 8px;
+    border-radius:6px; border:none; background:#fffdf5; color:var(--ink);
+  }
+  .row select{
+    flex:1; min-width:0; font-family:'VT323', monospace; font-size:16px; padding:6px;
+    border-radius:6px; border:none; background:#fffdf5; color:var(--ink);
+  }
+  .iconBtn{
+    flex:none; font-size:16px; background:none; border:none; cursor:pointer; padding:4px 6px;
+    color:var(--wood-text);
+  }
+  .iconBtn.danger{ color:var(--danger); }
+  .smallBtn{
+    font-family:'Press Start 2P', monospace; font-size:9px;
+    background:var(--gold); color:var(--ink); border:2px solid var(--gold-dark);
+    border-radius:6px; padding:8px 12px; cursor:pointer; box-shadow:0 3px 0 var(--gold-dark);
+  }
+  .smallBtn:active{ transform:translateY(3px); box-shadow:none; }
+  .smallBtn:disabled{ opacity:.5; cursor:not-allowed; }
+  #soundList .row span.soundName{ flex:1; font-size:17px; }
+  #activateBtn{
+    display:block; width:100%; font-family:'Press Start 2P', monospace; font-size:14px;
+    padding:18px; border-radius:12px; border:3px solid; cursor:pointer;
+    background:var(--danger); border-color:#7a2018; color:#fff; box-shadow:0 5px 0 #7a2018;
+  }
+  #activateBtn.on{ background:var(--green-glow); border-color:#2f8f2f; color:#0e2e0e; box-shadow:0 5px 0 #2f8f2f; }
+  #activateBtn:active{ transform:translateY(4px); box-shadow:none; }
+  #activateBtn:disabled{ opacity:.5; cursor:not-allowed; }
+  #micStatus{ text-align:center; font-size:16px; margin-top:10px; min-height:20px; }
+  #uploadRow{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  #toast{
+    position:fixed; top:16px; left:50%; transform:translate(-50%,-14px);
+    font-family:'Press Start 2P', monospace; font-size:11px;
+    background:rgba(36,22,8,0.85); color:var(--wood-text); border-radius:8px;
+    padding:10px 16px; opacity:0; pointer-events:none; z-index:60;
+    transition:opacity .25s, transform .25s; text-align:center; max-width:80vw;
+  }
+  #toast.show{ opacity:1; transform:translate(-50%,0); }
+  .hint{ font-size:15px; opacity:.85; margin-top:8px; }
+</style>
+</head><body>
+
+<div id="topbar">
+  <h1>🔊 SOUND PLAY LISTENER</h1>
+  <a id="backLink" href="../index.html">← Back to Apps</a>
+</div>
+
+<div id="main">
+  <div id="authGate" class="card" hidden>
+    <p>Please log in through Seed &amp; Wait first, then come back here.</p>
+    <a id="authGateBack" class="smallBtn" href="../index.html" style="text-decoration:none; display:inline-block;">GO LOG IN</a>
+  </div>
+
+  <div id="appBody" hidden>
+    <div class="card">
+      <h2>WORDS &amp; SOUNDS</h2>
+      <div id="wordList"></div>
+      <button class="smallBtn" id="addWordBtn" style="margin-top:8px;">+ ADD WORD</button>
+    </div>
+
+    <div class="card">
+      <h2>YOUR SOUNDS</h2>
+      <div id="soundList"></div>
+      <div id="uploadRow" style="margin-top:10px;">
+        <input type="file" id="uploadInput" accept="audio/mpeg,audio/wav,audio/ogg,audio/*" hidden>
+        <button class="smallBtn" id="uploadBtn">+ UPLOAD SOUND</button>
+        <span class="hint" id="uploadHint">MP3, WAV, or OGG</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <button id="activateBtn">ACTIVATE</button>
+      <div id="micStatus"></div>
+      <div class="hint" style="text-align:center;">When green, the mic is live and listening for your words. Works best in Chrome or Edge.</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+var firebaseConfig = {
+  apiKey: "AIzaSyDzeTAZ0u7MnFJeb1LjoLgEh9b8X4Bn768",
+  authDomain: "seed-and-wait.firebaseapp.com",
+  projectId: "seed-and-wait",
+  storageBucket: "seed-and-wait.firebasestorage.app",
+  messagingSenderId: "1066399791306",
+  appId: "1:1066399791306:web:5fb48a8d2eaff45d4edc33"
+};
+firebase.initializeApp(firebaseConfig);
+var fbAuth = firebase.auth();
+var fbDb = firebase.firestore();
+var fbStorage = null;
+try{ fbStorage = firebase.storage(); }catch(e){}
+
+var currentUid = null;
+var config = { words: [], sounds: [] }; // { words:[{id,word,soundId}], sounds:[{id,name,storagePath,url}] }
+var playingBySoundId = {}; // soundId -> Audio instance currently playing (don't restart while already playing)
+
+function toast(msg, ms){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(function(){ t.classList.remove('show'); }, ms || 2200);
+}
+function uid8(){ return Math.random().toString(36).slice(2, 10); }
+function randomRate(){ var r = [0.9, 1, 1.1]; return r[Math.floor(Math.random()*r.length)]; }
+
+function docRef(){ return fbDb.collection('soundplayConfigs').doc(currentUid); }
+
+function saveConfig(){
+  if(!currentUid) return;
+  docRef().set(config, { merge:false }).catch(function(){ toast('Could not save — check your connection.'); });
+}
+function loadConfig(){
+  return docRef().get().then(function(doc){
+    if(doc.exists){
+      var data = doc.data();
+      config.words = data.words || [];
+      config.sounds = data.sounds || [];
+    }
+    renderAll();
+  });
+}
+
+function renderAll(){
+  renderWordList();
+  renderSoundList();
+}
+
+function renderWordList(){
+  var el = document.getElementById('wordList');
+  if(!config.words.length){
+    el.innerHTML = '<div class="hint">No words yet — add one below.</div>';
+    return;
+  }
+  el.innerHTML = '';
+  config.words.forEach(function(w){
+    var row = document.createElement('div');
+    row.className = 'row';
+    var soundOptions = '<option value="">(no sound)</option>' + config.sounds.map(function(s){
+      return '<option value="'+s.id+'"'+(s.id===w.soundId?' selected':'')+'>'+escapeHtml(s.name)+'</option>';
+    }).join('');
+    row.innerHTML =
+      '<input type="text" value="'+escapeHtml(w.word)+'" placeholder="word to listen for">' +
+      '<select>'+soundOptions+'</select>' +
+      '<button class="iconBtn danger" title="Delete">✕</button>';
+    var input = row.querySelector('input');
+    var select = row.querySelector('select');
+    var delBtn = row.querySelector('button');
+    input.addEventListener('change', function(){
+      w.word = input.value.trim().toLowerCase();
+      saveConfig();
+    });
+    select.addEventListener('change', function(){
+      w.soundId = select.value || null;
+      saveConfig();
+    });
+    delBtn.addEventListener('click', function(){
+      config.words = config.words.filter(function(x){ return x.id !== w.id; });
+      saveConfig();
+      renderWordList();
+    });
+    el.appendChild(row);
+  });
+}
+
+function renderSoundList(){
+  var el = document.getElementById('soundList');
+  if(!config.sounds.length){
+    el.innerHTML = '<div class="hint">No sounds uploaded yet.</div>';
+    return;
+  }
+  el.innerHTML = '';
+  config.sounds.forEach(function(s){
+    var row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML =
+      '<span class="soundName">'+escapeHtml(s.name)+'</span>' +
+      '<button class="iconBtn" title="Preview">▶️</button>' +
+      '<button class="iconBtn danger" title="Delete">✕</button>';
+    var playBtn = row.querySelectorAll('button')[0];
+    var delBtn = row.querySelectorAll('button')[1];
+    playBtn.addEventListener('click', function(){ playSound(s); });
+    delBtn.addEventListener('click', function(){ deleteSound(s); });
+    el.appendChild(row);
+  });
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+
+/* ---- uploading / deleting sound files ---- */
+document.getElementById('uploadBtn').addEventListener('click', function(){
+  if(!fbStorage){ toast('Sound uploads are not set up yet.'); return; }
+  document.getElementById('uploadInput').click();
+});
+document.getElementById('uploadInput').addEventListener('change', function(){
+  var file = this.files && this.files[0];
+  this.value = '';
+  if(!file || !currentUid) return;
+  if(!fbStorage){ toast('Sound uploads are not set up yet.'); return; }
+  var okTypes = ['audio/mpeg','audio/mp3','audio/wav','audio/wave','audio/x-wav','audio/ogg'];
+  if(okTypes.indexOf(file.type) < 0 && !/\.(mp3|wav|ogg)$/i.test(file.name)){
+    toast('Please choose an MP3, WAV, or OGG file.');
+    return;
+  }
+  var id = uid8();
+  var path = 'soundplay/' + currentUid + '/' + id + '-' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  toast('Uploading...', 60000);
+  fbStorage.ref(path).put(file).then(function(snap){
+    return snap.ref.getDownloadURL();
+  }).then(function(url){
+    config.sounds.push({ id:id, name:file.name, storagePath:path, url:url });
+    saveConfig();
+    renderSoundList();
+    renderWordList();
+    toast('Uploaded!');
+  }).catch(function(err){
+    toast('Upload failed. Is Storage enabled for this project?');
+  });
+});
+function deleteSound(s){
+  config.sounds = config.sounds.filter(function(x){ return x.id !== s.id; });
+  config.words.forEach(function(w){ if(w.soundId === s.id) w.soundId = null; });
+  saveConfig();
+  renderSoundList();
+  renderWordList();
+  if(fbStorage && s.storagePath){
+    fbStorage.ref(s.storagePath)['delete']().catch(function(){});
+  }
+}
+
+/* ---- adding words ---- */
+document.getElementById('addWordBtn').addEventListener('click', function(){
+  config.words.push({ id:uid8(), word:'', soundId:null });
+  saveConfig();
+  renderWordList();
+  var inputs = document.querySelectorAll('#wordList input[type=text]');
+  if(inputs.length) inputs[inputs.length-1].focus();
+});
+
+/* ---- playback: fresh Audio instance per trigger, random speed, never restart one already playing ---- */
+function playSound(sound){
+  if(!sound || !sound.url) return;
+  var existing = playingBySoundId[sound.id];
+  if(existing && !existing.ended && !existing.paused) return; // already playing -- do not restart it
+  var audio = new Audio(sound.url);
+  audio.playbackRate = randomRate();
+  playingBySoundId[sound.id] = audio;
+  audio.addEventListener('ended', function(){
+    if(playingBySoundId[sound.id] === audio) delete playingBySoundId[sound.id];
+  });
+  audio.play().catch(function(){});
+}
+
+/* ---- speech recognition ---- */
+var recognition = null;
+var listening = false;
+var userWantsListening = false;
+var SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function normalizeWord(w){ return (w||'').toLowerCase().replace(/[^a-z0-9' ]/g, '').trim(); }
+
+function handleTranscript(transcript){
+  var heard = normalizeWord(transcript).split(/\s+/).filter(Boolean);
+  if(!heard.length) return;
+  var heardSet = {};
+  heard.forEach(function(w){ heardSet[w] = true; });
+  config.words.forEach(function(w){
+    var target = normalizeWord(w.word);
+    if(!target || !w.soundId) return;
+    if(heardSet[target]){
+      var sound = config.sounds.filter(function(s){ return s.id === w.soundId; })[0];
+      if(sound) playSound(sound);
+    }
+  });
+}
+
+function startRecognition(){
+  if(!SpeechRecognitionCtor){
+    document.getElementById('micStatus').textContent = 'Speech recognition is not supported in this browser. Try Chrome or Edge.';
+    return;
+  }
+  recognition = new SpeechRecognitionCtor();
+  recognition.continuous = true;
+  recognition.interimResults = false;
+  recognition.lang = 'en-US';
+  recognition.onresult = function(e){
+    for(var i = e.resultIndex; i < e.results.length; i++){
+      if(e.results[i].isFinal){
+        handleTranscript(e.results[i][0].transcript);
+      }
+    }
+  };
+  recognition.onerror = function(e){
+    if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){
+      document.getElementById('micStatus').textContent = 'Microphone permission was denied.';
+      userWantsListening = false;
+      setActivateVisual(false);
+    }
+  };
+  recognition.onend = function(){
+    listening = false;
+    if(userWantsListening){
+      // Chrome stops recognition periodically on its own -- restart it as long as the user
+      // hasn't turned this off, so listening is effectively continuous
+      try{ recognition.start(); listening = true; }catch(e){}
+    }
+  };
+  try{
+    recognition.start();
+    listening = true;
+    document.getElementById('micStatus').textContent = 'Listening...';
+  }catch(e){
+    document.getElementById('micStatus').textContent = 'Could not start the microphone.';
+  }
+}
+function stopRecognition(){
+  userWantsListening = false;
+  if(recognition){
+    try{ recognition.onend = null; recognition.stop(); }catch(e){}
+  }
+  listening = false;
+  document.getElementById('micStatus').textContent = '';
+}
+function setActivateVisual(on){
+  var btn = document.getElementById('activateBtn');
+  btn.classList.toggle('on', on);
+  btn.textContent = on ? 'ACTIVATED' : 'ACTIVATE';
+}
+document.getElementById('activateBtn').addEventListener('click', function(){
+  if(!userWantsListening){
+    userWantsListening = true;
+    setActivateVisual(true);
+    startRecognition();
+  } else {
+    setActivateVisual(false);
+    stopRecognition();
+  }
+});
+if(!SpeechRecognitionCtor){
+  document.getElementById('activateBtn').disabled = true;
+  document.getElementById('micStatus').textContent = 'Speech recognition is not supported in this browser. Try Chrome or Edge.';
+}
+
+/* ---- auth gate: inherits the session from Seed & Wait (same Firebase project, same origin) ---- */
+fbAuth.onAuthStateChanged(function(user){
+  if(user){
+    currentUid = user.uid;
+    document.getElementById('authGate').hidden = true;
+    document.getElementById('appBody').hidden = false;
+    loadConfig();
+  } else {
+    currentUid = null;
+    document.getElementById('authGate').hidden = false;
+    document.getElementById('appBody').hidden = true;
+  }
+});
+
+window.addEventListener('beforeunload', function(){ stopRecognition(); });
+
+})();
+</script>
+</body></html>
