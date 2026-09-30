@@ -1090,7 +1090,7 @@ if('serviceWorker' in navigator){
 </div>
 
 <div id="appPickerScreen" class="authScreen" hidden>
-  <div class="authBg"></div>
+  <div class="authBg" style="background:linear-gradient(160deg, rgba(20,15,10,.55), rgba(10,8,6,.65) 60%, rgba(5,4,3,.75)), url('bg/apppicker.jpg') center/cover no-repeat;"></div>
   <div class="authOverlay" style="max-width:520px;">
     <div class="authTitle" style="font-size:16px; text-align:center;">Pick an app to play!</div>
     <div class="appGrid">
@@ -4428,9 +4428,18 @@ function enterSeedAndWaitGame(){
   renderAll();
   if(!growthTickInterval){ growthTickInterval = setInterval(growthTick, 1000); }
 }
+function stopAllSounds(){
+  try{ stopWeatherMusic(); }catch(e){}
+  try{ stopRaceMusic(); }catch(e){}
+  Object.keys(REAL_AUDIO).forEach(function(k){
+    var a = REAL_AUDIO[k];
+    if(a){ try{ a.pause(); a.currentTime = 0; }catch(e){} }
+  });
+}
 function exitToAppPicker(){
   if(growthTickInterval){ clearInterval(growthTickInterval); growthTickInterval = null; }
   try{ persist(true); }catch(e){} // force a final sync before leaving so nothing done in the last moment is lost
+  stopAllSounds();
   showAppPicker();
 }
 
@@ -4555,8 +4564,8 @@ function initAuthUI(){
   document.getElementById('authGoLogin').addEventListener('click', function(){ showAuthScreen('authLoginScreen'); });
   document.getElementById('authSignupBack').addEventListener('click', function(){ showAuthScreen('authHomeScreen'); });
   document.getElementById('authLoginBack').addEventListener('click', function(){ showAuthScreen('authHomeScreen'); });
-  document.getElementById('appTileSeedWait').addEventListener('click', function(){ enterSeedAndWaitGame(); });
-  document.getElementById('appTileSoundPlay').addEventListener('click', function(){ window.location.href = 'soundplay/index.html'; });
+  document.getElementById('appTileSeedWait').addEventListener('click', function(){ SFX.click(); enterSeedAndWaitGame(); });
+  document.getElementById('appTileSoundPlay').addEventListener('click', function(){ SFX.click(); window.location.href = 'soundplay/index.html'; });
   document.getElementById('appPickerLogoutBtn').addEventListener('click', function(){ logoutAccount(); });
 
   document.getElementById('authGenderF').addEventListener('click', function(){

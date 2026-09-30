@@ -1,87 +1,122 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Sound Play Listener</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <style>
   :root{
-    --panel:#4a3320; --panel-2:#3a2717; --panel-edge:#241608; --wood-text:#f6e9d2;
-    --gold:#ffd45c; --gold-dark:#c98a1c; --ink:#241608; --green-glow:#7CFC7C; --danger:#e0564a;
-    font-family:'VT323', monospace;
+    --panel-top:#3d7fd6; --panel-bottom:#1c4a86; --panel2-top:#2c67ac; --panel2-bottom:#153a6e;
+    --panel-edge:#0a2648; --ink:#0a1830; --text:#eaf3ff;
+    --gold:#ffd45c; --gold-dark:#c98a1c;
+    --lime:#a6ff2e; --lime-light:#c8ff7a; --lime-dark:#6fbf10;
+    --green-glow:#7CFC7C; --flash:#39ff45; --danger:#e0564a; --danger-dark:#7a2018;
+    font-family: Arial, Helvetica, sans-serif;
   }
   *{ box-sizing:border-box; }
   html,body{ height:100%; margin:0; }
   body{
-    background:linear-gradient(160deg,#2a1f14,#1a1410 60%,#0f0c08);
-    color:var(--wood-text); min-height:100%; padding:16px; -webkit-tap-highlight-color:transparent;
+    background:radial-gradient(circle at 30% 0%, #123c73, #050d1e 55%, #01050f);
+    color:var(--text); min-height:100%; padding:16px; -webkit-tap-highlight-color:transparent;
+    font-family: Arial, Helvetica, sans-serif;
   }
   #topbar{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     max-width:700px; margin:0 auto 18px;
   }
   #topbar h1{
-    font-family:'Press Start 2P', monospace; font-size:14px; color:#fff;
-    text-shadow:0 2px 0 #000; margin:0;
+    font-size:17px; font-weight:800; color:#fff;
+    text-shadow:0 2px 0 #000; margin:0; letter-spacing:.5px;
   }
   #backLink{
-    font-family:'Press Start 2P', monospace; font-size:9px; color:var(--wood-text);
-    background:var(--panel); border:2px solid var(--panel-edge); border-radius:6px;
+    font-size:13px; font-weight:700; color:var(--text);
+    background:linear-gradient(160deg, var(--panel-top), var(--panel-bottom));
+    border:2px solid var(--panel-edge); border-radius:6px;
     padding:8px 10px; text-decoration:none; box-shadow:0 3px 0 var(--panel-edge);
   }
   #main{ max-width:700px; margin:0 auto; }
   .card{
-    background:var(--panel); border:3px solid var(--panel-edge); border-radius:12px;
+    background:linear-gradient(160deg, var(--panel-top), var(--panel-bottom));
+    border:3px solid var(--panel-edge); border-radius:12px;
     padding:16px; margin-bottom:16px; box-shadow:0 6px 0 rgba(0,0,0,.35);
   }
-  .card h2{ font-family:'Press Start 2P', monospace; font-size:11px; margin:0 0 12px; color:var(--gold); }
-  #authGate{ text-align:center; padding:30px 16px; }
-  #authGate p{ font-size:18px; line-height:1.5; }
-  .row{
-    display:flex; align-items:center; gap:8px; background:var(--panel-2);
-    border:2px solid var(--panel-edge); border-radius:8px; padding:8px 10px; margin-bottom:8px;
+  .card h2{ font-size:14px; font-weight:800; margin:0 0 12px; color:var(--lime); letter-spacing:.5px; }
+  .cardHeadRow{ display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+  .cardHeadRow h2{ margin:0 0 12px; }
+  .collapseBtn{
+    flex:none; width:30px; height:30px; margin-bottom:12px; font-size:18px; font-weight:800; line-height:1;
+    background:linear-gradient(160deg, var(--panel2-top), var(--panel2-bottom));
+    color:#fff; border:2px solid var(--panel-edge); border-radius:6px; cursor:pointer;
   }
+  #authGate{ text-align:center; padding:30px 16px; }
+  #authGate p{ font-size:17px; line-height:1.5; }
+  .row{
+    display:flex; align-items:center; gap:8px;
+    background:linear-gradient(160deg, var(--panel2-top), var(--panel2-bottom));
+    border:2px solid var(--panel-edge); border-radius:8px; padding:8px 10px; margin-bottom:8px;
+    transition:background .15s ease;
+  }
+  .row.flash{ background:var(--flash) !important; }
+  .row.dragging{ opacity:.55; }
+  .dragHandle{
+    flex:none; cursor:grab; padding:4px 6px; color:var(--text); opacity:.75;
+    font-size:16px; touch-action:none; -webkit-user-select:none; user-select:none;
+  }
+  .dragHandle:active{ cursor:grabbing; }
   .row input[type=text]{
-    flex:1; min-width:0; font-family:'VT323', monospace; font-size:18px; padding:6px 8px;
+    flex:1; min-width:0; font-family:Arial, Helvetica, sans-serif; font-size:16px; padding:8px 8px;
     border-radius:6px; border:none; background:#fffdf5; color:var(--ink);
   }
   .row select{
-    flex:1; min-width:0; font-family:'VT323', monospace; font-size:16px; padding:6px;
+    flex:1; min-width:0; font-family:Arial, Helvetica, sans-serif; font-size:14px; padding:8px;
     border-radius:6px; border:none; background:#fffdf5; color:var(--ink);
   }
   .iconBtn{
     flex:none; font-size:16px; background:none; border:none; cursor:pointer; padding:4px 6px;
-    color:var(--wood-text);
+    color:var(--text);
   }
   .iconBtn.danger{ color:var(--danger); }
   .smallBtn{
-    font-family:'Press Start 2P', monospace; font-size:9px;
-    background:var(--gold); color:var(--ink); border:2px solid var(--gold-dark);
-    border-radius:6px; padding:8px 12px; cursor:pointer; box-shadow:0 3px 0 var(--gold-dark);
+    font-size:13px; font-weight:800;
+    background:linear-gradient(160deg, #ffe08a, var(--gold)); color:var(--ink); border:2px solid var(--gold-dark);
+    border-radius:6px; padding:10px 12px; cursor:pointer; box-shadow:0 3px 0 var(--gold-dark);
+  }
+  .smallBtn.limeBtn{
+    background:linear-gradient(160deg, var(--lime-light), var(--lime)); color:#123000; border-color:var(--lime-dark);
+    box-shadow:0 3px 0 var(--lime-dark);
   }
   .smallBtn:active{ transform:translateY(3px); box-shadow:none; }
   .smallBtn:disabled{ opacity:.5; cursor:not-allowed; }
-  #soundList .row span.soundName{ flex:1; font-size:17px; }
+  #soundList .row span.soundName{ flex:1; font-size:15px; }
+  #wordList, #soundList{ max-height:224px; overflow-y:auto; padding-right:2px; }
   #activateBtn{
-    display:block; width:100%; font-family:'Press Start 2P', monospace; font-size:14px;
+    display:block; width:100%; font-size:16px; font-weight:800;
     padding:18px; border-radius:12px; border:3px solid; cursor:pointer;
-    background:var(--danger); border-color:#7a2018; color:#fff; box-shadow:0 5px 0 #7a2018;
+    background:linear-gradient(160deg, #f0685a, var(--danger)); border-color:var(--danger-dark); color:#fff;
+    box-shadow:0 5px 0 var(--danger-dark);
   }
-  #activateBtn.on{ background:var(--green-glow); border-color:#2f8f2f; color:#0e2e0e; box-shadow:0 5px 0 #2f8f2f; }
+  #activateBtn.on{
+    background:linear-gradient(160deg, #baffba, var(--green-glow)); border-color:#2f8f2f; color:#0e2e0e;
+    box-shadow:0 5px 0 #2f8f2f;
+  }
   #activateBtn:active{ transform:translateY(4px); box-shadow:none; }
   #activateBtn:disabled{ opacity:.5; cursor:not-allowed; }
-  #micStatus{ text-align:center; font-size:16px; margin-top:10px; min-height:20px; }
+  #micStatus{ text-align:center; font-size:15px; margin-top:10px; min-height:20px; }
   #uploadRow{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  #recordStatus{ width:100%; font-size:14px; color:var(--lime-light); }
   #toast{
     position:fixed; top:16px; left:50%; transform:translate(-50%,-14px);
-    font-family:'Press Start 2P', monospace; font-size:11px;
-    background:rgba(36,22,8,0.85); color:var(--wood-text); border-radius:8px;
+    font-size:13px; font-weight:700;
+    background:rgba(10,20,45,0.9); color:var(--text); border-radius:8px;
     padding:10px 16px; opacity:0; pointer-events:none; z-index:60;
     transition:opacity .25s, transform .25s; text-align:center; max-width:80vw;
   }
   #toast.show{ opacity:1; transform:translate(-50%,0); }
-  .hint{ font-size:15px; opacity:.85; margin-top:8px; }
+  .hint{ font-size:13px; opacity:.85; margin-top:8px; }
+  @media (max-width:480px){
+    .row{ flex-wrap:wrap; }
+    .row input[type=text]{ flex:1 1 100%; order:1; }
+    .row select{ flex:1 1 auto; order:2; }
+  }
 </style>
 </head><body>
 
@@ -100,16 +135,24 @@
     <div class="card">
       <h2>WORDS &amp; SOUNDS</h2>
       <div id="wordList"></div>
-      <button class="smallBtn" id="addWordBtn" style="margin-top:8px;">+ ADD WORD</button>
+      <button class="smallBtn limeBtn" id="addWordBtn" style="margin-top:8px;">+ ADD WORD</button>
+      <div class="hint">Type one word, a single letter, or a few words together (like "hello sir") — all of them must be said together to trigger. A lowercase letter like "a" matches any word with that letter in it; an uppercase letter like "A" only matches when just that letter is said by itself.</div>
     </div>
 
     <div class="card">
-      <h2>YOUR SOUNDS</h2>
-      <div id="soundList"></div>
-      <div id="uploadRow" style="margin-top:10px;">
-        <input type="file" id="uploadInput" accept="audio/mpeg,audio/wav,audio/ogg,audio/*" hidden>
-        <button class="smallBtn" id="uploadBtn">+ UPLOAD SOUND</button>
-        <span class="hint" id="uploadHint">MP3, WAV, or OGG — short clips only, under ~700KB</span>
+      <div class="cardHeadRow">
+        <h2>YOUR SOUNDS</h2>
+        <button class="collapseBtn" id="soundsCollapseBtn" title="Collapse">–</button>
+      </div>
+      <div id="soundsBody">
+        <div id="soundList"></div>
+        <div id="uploadRow" style="margin-top:10px;">
+          <input type="file" id="uploadInput" accept="audio/mpeg,audio/wav,audio/ogg,audio/*" hidden>
+          <button class="smallBtn limeBtn" id="uploadBtn">+ UPLOAD SOUND</button>
+          <button class="smallBtn limeBtn" id="recordBtn">🎙 RECORD SOUND</button>
+          <span class="hint" id="uploadHint">MP3, WAV, or OGG — short clips only, under ~700KB. Recordings are capped at 10 seconds.</span>
+          <span id="recordStatus"></span>
+        </div>
       </div>
     </div>
 
@@ -141,8 +184,7 @@ var fbDb = firebase.firestore();
 var MAX_SOUND_BYTES = 700 * 1024; // raw file size cap -- base64 inflates ~33%, must stay under Firestore's 1MiB/doc limit
 
 var currentUid = null;
-var config = { words: [], sounds: [] }; // { words:[{id,word,soundId}], sounds:[{id,name,mimeType,dataBase64,url}] }
-var playingBySoundId = {}; // soundId -> Audio instance currently playing (don't restart while already playing)
+var config = { words: [], sounds: [] }; // { words:[{id,word,soundId}], sounds:[{id,name,mimeType,dataBase64,url,order}] }
 
 function toast(msg, ms){
   var t = document.getElementById('toast');
@@ -153,6 +195,10 @@ function toast(msg, ms){
 }
 function uid8(){ return Math.random().toString(36).slice(2, 10); }
 function randomRate(){ var r = [0.9, 1, 1.1]; return r[Math.floor(Math.random()*r.length)]; }
+
+/* ---- shared sound effects borrowed from Seed & Wait ---- */
+function playGreenSfx(){ try{ var a = new Audio('../sfx-green.mp3'); a.playbackRate = randomRate(); a.play().catch(function(){}); }catch(e){} }
+function playAppearSfx(){ try{ new Audio('../sfx-appear.mp3').play().catch(function(){}); }catch(e){} }
 
 function docRef(){ return fbDb.collection('soundplayConfigs').doc(currentUid); }
 function soundsRef(){ return docRef().collection('sounds'); }
@@ -174,9 +220,11 @@ function loadConfig(){
         name: data.name,
         mimeType: data.mimeType,
         dataBase64: data.dataBase64,
+        order: (typeof data.order === 'number') ? data.order : 0,
         url: 'data:' + data.mimeType + ';base64,' + data.dataBase64
       });
     });
+    config.sounds.sort(function(a,b){ return a.order - b.order; });
     renderAll();
   }).catch(function(){
     toast('Could not load your sounds — check your connection.');
@@ -198,18 +246,20 @@ function renderWordList(){
   config.words.forEach(function(w){
     var row = document.createElement('div');
     row.className = 'row';
+    row.setAttribute('data-id', w.id);
     var soundOptions = '<option value="">(no sound)</option>' + config.sounds.map(function(s){
       return '<option value="'+s.id+'"'+(s.id===w.soundId?' selected':'')+'>'+escapeHtml(s.name)+'</option>';
     }).join('');
     row.innerHTML =
-      '<input type="text" value="'+escapeHtml(w.word)+'" placeholder="word to listen for">' +
+      '<span class="dragHandle" title="Drag to reorder">☰</span>' +
+      '<input type="text" value="'+escapeHtml(w.word)+'" placeholder="word or phrase (e.g. hello sir)">' +
       '<select>'+soundOptions+'</select>' +
       '<button class="iconBtn danger" title="Delete">✕</button>';
     var input = row.querySelector('input');
     var select = row.querySelector('select');
-    var delBtn = row.querySelector('button');
+    var delBtn = row.querySelector('button.iconBtn.danger');
     input.addEventListener('change', function(){
-      w.word = input.value.trim().toLowerCase();
+      w.word = input.value.trim();
       saveWords();
     });
     select.addEventListener('change', function(){
@@ -235,7 +285,9 @@ function renderSoundList(){
   config.sounds.forEach(function(s){
     var row = document.createElement('div');
     row.className = 'row';
+    row.setAttribute('data-id', s.id);
     row.innerHTML =
+      '<span class="dragHandle" title="Drag to reorder">☰</span>' +
       '<span class="soundName">'+escapeHtml(s.name)+'</span>' +
       '<button class="iconBtn" title="Preview">▶️</button>' +
       '<button class="iconBtn danger" title="Delete">✕</button>';
@@ -252,6 +304,82 @@ function escapeHtml(s){
     return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
   });
 }
+
+/* ---- drag-to-reorder: pointer events cover mouse, touch, and pen/console pointers alike ---- */
+function attachDragReorder(containerEl, getArr, setArr, onDone){
+  var draggingEl = null, draggingIdx = null;
+  function getRows(){ return Array.prototype.slice.call(containerEl.querySelectorAll('.row')); }
+  containerEl.addEventListener('pointerdown', function(e){
+    var handle = e.target.closest ? e.target.closest('.dragHandle') : null;
+    if(!handle) return;
+    var row = handle.closest('.row');
+    if(!row) return;
+    draggingEl = row;
+    draggingIdx = getRows().indexOf(row);
+    try{ row.setPointerCapture(e.pointerId); }catch(err){}
+    row.classList.add('dragging');
+    e.preventDefault();
+  });
+  containerEl.addEventListener('pointermove', function(e){
+    if(!draggingEl) return;
+    var rows = getRows();
+    var y = e.clientY;
+    for(var i=0;i<rows.length;i++){
+      if(rows[i] === draggingEl) continue;
+      var r = rows[i].getBoundingClientRect();
+      var mid = r.top + r.height/2;
+      if(y < mid && i < draggingIdx){
+        containerEl.insertBefore(draggingEl, rows[i]);
+        draggingIdx = getRows().indexOf(draggingEl);
+        break;
+      } else if(y > mid && i > draggingIdx){
+        containerEl.insertBefore(draggingEl, rows[i].nextSibling);
+        draggingIdx = getRows().indexOf(draggingEl);
+        break;
+      }
+    }
+  });
+  function finish(){
+    if(!draggingEl) return;
+    draggingEl.classList.remove('dragging');
+    var ids = getRows().map(function(r){ return r.getAttribute('data-id'); });
+    var arr = getArr();
+    var byId = {}; arr.forEach(function(x){ byId[x.id] = x; });
+    var newArr = ids.map(function(id){ return byId[id]; }).filter(Boolean);
+    setArr(newArr);
+    draggingEl = null; draggingIdx = null;
+    onDone();
+  }
+  containerEl.addEventListener('pointerup', finish);
+  containerEl.addEventListener('pointercancel', finish);
+}
+attachDragReorder(document.getElementById('wordList'),
+  function(){ return config.words; },
+  function(newArr){ config.words = newArr; saveWords(); },
+  function(){ renderWordList(); }
+);
+attachDragReorder(document.getElementById('soundList'),
+  function(){ return config.sounds; },
+  function(newArr){ config.sounds = newArr; persistSoundOrder(); },
+  function(){ renderSoundList(); renderWordList(); }
+);
+function persistSoundOrder(){
+  var batch = fbDb.batch();
+  config.sounds.forEach(function(s, i){
+    s.order = i;
+    batch.set(soundsRef().doc(s.id), { order: i }, { merge:true });
+  });
+  batch.commit().catch(function(){});
+}
+
+/* ---- collapsible "Your Sounds" panel ---- */
+var soundsCollapsed = false;
+document.getElementById('soundsCollapseBtn').addEventListener('click', function(){
+  soundsCollapsed = !soundsCollapsed;
+  document.getElementById('soundsBody').hidden = soundsCollapsed;
+  this.textContent = soundsCollapsed ? '+' : '–';
+  this.title = soundsCollapsed ? 'Expand' : 'Collapse';
+});
 
 /* ---- uploading / deleting sound files ----
    No Firebase Storage (that needs a paid plan) -- short clips are stored directly in
@@ -279,11 +407,13 @@ document.getElementById('uploadInput').addEventListener('change', function(){
     var mimeType = dataUrl.slice(5, dataUrl.indexOf(';'));
     var base64 = dataUrl.slice(commaIdx + 1);
     var id = uid8();
+    var order = config.sounds.length;
     toast('Uploading...', 10000);
-    soundsRef().doc(id).set({ name: file.name, mimeType: mimeType, dataBase64: base64 }).then(function(){
-      config.sounds.push({ id:id, name:file.name, mimeType:mimeType, dataBase64:base64, url:dataUrl });
+    soundsRef().doc(id).set({ name: file.name, mimeType: mimeType, dataBase64: base64, order: order }).then(function(){
+      config.sounds.push({ id:id, name:file.name, mimeType:mimeType, dataBase64:base64, order:order, url:dataUrl });
       renderSoundList();
       renderWordList();
+      playGreenSfx();
       toast('Uploaded!');
     }).catch(function(){
       toast('Upload failed — check your connection.');
@@ -301,27 +431,106 @@ function deleteSound(s){
   soundsRef().doc(s.id)['delete']().catch(function(){});
 }
 
+/* ---- recording your own sound (mic), capped at 10 seconds ---- */
+var mediaRecorder = null, recordedChunks = [], recordTimer = null, recordCountdown = 0;
+document.getElementById('recordBtn').addEventListener('click', function(){
+  if(mediaRecorder && mediaRecorder.state === 'recording'){
+    mediaRecorder.stop();
+    return;
+  }
+  if(!currentUid) return;
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder){
+    toast('Recording is not supported in this browser.');
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ audio:true }).then(function(stream){
+    recordedChunks = [];
+    var mimeType = '';
+    var candidates = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'];
+    for(var i=0;i<candidates.length;i++){
+      if(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(candidates[i])){ mimeType = candidates[i]; break; }
+    }
+    try{
+      mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType:mimeType }) : new MediaRecorder(stream);
+    }catch(e){
+      toast('Could not start recording on this device.');
+      stream.getTracks().forEach(function(t){ t.stop(); });
+      return;
+    }
+    mediaRecorder.ondataavailable = function(e){ if(e.data && e.data.size) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = function(){
+      stream.getTracks().forEach(function(t){ t.stop(); });
+      if(recordTimer){ clearInterval(recordTimer); recordTimer = null; }
+      document.getElementById('recordBtn').textContent = '🎙 RECORD SOUND';
+      document.getElementById('recordStatus').textContent = '';
+      var blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+      if(!blob.size) return;
+      if(blob.size > MAX_SOUND_BYTES){
+        toast('That recording is too large — try a shorter clip.');
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function(){
+        var dataUrl = reader.result;
+        var commaIdx = dataUrl.indexOf(',');
+        var mimeTypeOut = dataUrl.slice(5, dataUrl.indexOf(';'));
+        var base64 = dataUrl.slice(commaIdx + 1);
+        var name = window.prompt('Name this sound:', 'Recording ' + new Date().toLocaleTimeString());
+        if(name === null) return; // cancelled
+        name = name.trim() || ('Recording ' + Date.now());
+        var id = uid8();
+        var order = config.sounds.length;
+        soundsRef().doc(id).set({ name:name, mimeType:mimeTypeOut, dataBase64:base64, order:order }).then(function(){
+          config.sounds.push({ id:id, name:name, mimeType:mimeTypeOut, dataBase64:base64, order:order, url:dataUrl });
+          renderSoundList();
+          renderWordList();
+          playGreenSfx();
+          toast('Sound recorded!');
+        }).catch(function(){ toast('Could not save the recording.'); });
+      };
+      reader.readAsDataURL(blob);
+    };
+    mediaRecorder.start();
+    document.getElementById('recordBtn').textContent = '⏹ STOP';
+    recordCountdown = 10;
+    document.getElementById('recordStatus').textContent = 'Recording... ' + recordCountdown + 's';
+    recordTimer = setInterval(function(){
+      recordCountdown--;
+      if(recordCountdown <= 0){
+        if(recordTimer){ clearInterval(recordTimer); recordTimer = null; }
+        if(mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+      } else {
+        document.getElementById('recordStatus').textContent = 'Recording... ' + recordCountdown + 's';
+      }
+    }, 1000);
+  }).catch(function(){
+    toast('Microphone permission was denied.');
+  });
+});
+
 /* ---- adding words ---- */
 document.getElementById('addWordBtn').addEventListener('click', function(){
   config.words.push({ id:uid8(), word:'', soundId:null });
   saveWords();
   renderWordList();
+  playGreenSfx();
   var inputs = document.querySelectorAll('#wordList input[type=text]');
   if(inputs.length) inputs[inputs.length-1].focus();
 });
 
-/* ---- playback: fresh Audio instance per trigger, random speed, never restart one already playing ---- */
+/* ---- playback: every trigger is a fresh, independent Audio instance at a random speed,
+   so the same sound can overlap itself many times instead of restarting ---- */
 function playSound(sound){
   if(!sound || !sound.url) return;
-  var existing = playingBySoundId[sound.id];
-  if(existing && !existing.ended && !existing.paused) return; // already playing -- do not restart it
   var audio = new Audio(sound.url);
   audio.playbackRate = randomRate();
-  playingBySoundId[sound.id] = audio;
-  audio.addEventListener('ended', function(){
-    if(playingBySoundId[sound.id] === audio) delete playingBySoundId[sound.id];
-  });
   audio.play().catch(function(){});
+}
+function flashWordRow(wordId){
+  var row = document.querySelector('#wordList .row[data-id="'+wordId+'"]');
+  if(!row) return;
+  row.classList.add('flash');
+  setTimeout(function(){ row.classList.remove('flash'); }, 1000);
 }
 
 /* ---- speech recognition ---- */
@@ -329,22 +538,69 @@ var recognition = null;
 var listening = false;
 var userWantsListening = false;
 var SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+var carryTokens = []; // small trailing buffer so a phrase split across two recognition results still matches
 
-function normalizeWord(w){ return (w||'').toLowerCase().replace(/[^a-z0-9' ]/g, '').trim(); }
+function normalizeHeard(w){ return (w||'').toLowerCase().replace(/[^a-z0-9' ]/g, '').trim(); }
+function normalizeStoredWord(w){ return (w||'').replace(/[^a-zA-Z0-9' ]/g, '').trim(); }
+function isSingleLetter(s){ return s.length === 1 && /[a-zA-Z]/.test(s); }
+
+function maxPhraseLen(){
+  var max = 1;
+  config.words.forEach(function(w){
+    var target = normalizeStoredWord(w.word);
+    if(!target || isSingleLetter(target)) return;
+    var len = target.split(/\s+/).filter(Boolean).length;
+    if(len > max) max = len;
+  });
+  return max;
+}
+
+/* returns how many times `target` was said in `tokens` -- lets the same word said
+   several times in a row trigger that many overlapping plays */
+function countMatches(target, tokens){
+  if(!target) return 0;
+  if(isSingleLetter(target)){
+    var isUpper = target === target.toUpperCase();
+    var letter = target.toLowerCase();
+    var count = 0;
+    tokens.forEach(function(t){
+      if(isUpper){ if(t === letter) count++; }
+      else { if(t.indexOf(letter) >= 0) count++; }
+    });
+    return count;
+  }
+  var phraseWords = target.toLowerCase().split(/\s+/).filter(Boolean);
+  if(!phraseWords.length) return 0;
+  var n = 0;
+  for(var i=0; i <= tokens.length - phraseWords.length; i++){
+    var match = true;
+    for(var j=0;j<phraseWords.length;j++){
+      if(tokens[i+j] !== phraseWords[j]){ match = false; break; }
+    }
+    if(match){ n++; i += phraseWords.length - 1; }
+  }
+  return n;
+}
 
 function handleTranscript(transcript){
-  var heard = normalizeWord(transcript).split(/\s+/).filter(Boolean);
+  var heard = normalizeHeard(transcript).split(/\s+/).filter(Boolean);
   if(!heard.length) return;
-  var heardSet = {};
-  heard.forEach(function(w){ heardSet[w] = true; });
+  var windowTokens = carryTokens.concat(heard);
   config.words.forEach(function(w){
-    var target = normalizeWord(w.word);
+    var target = normalizeStoredWord(w.word);
     if(!target || !w.soundId) return;
-    if(heardSet[target]){
+    var isPhrase = !isSingleLetter(target) && target.indexOf(' ') >= 0;
+    var n = countMatches(target, isPhrase ? windowTokens : heard);
+    if(n > 0){
       var sound = config.sounds.filter(function(s){ return s.id === w.soundId; })[0];
-      if(sound) playSound(sound);
+      if(sound){
+        for(var k=0;k<n;k++){ playSound(sound); }
+        flashWordRow(w.id);
+      }
     }
   });
+  var keep = Math.max(0, maxPhraseLen() - 1);
+  carryTokens = heard.slice(Math.max(0, heard.length - keep));
 }
 
 function startRecognition(){
@@ -352,6 +608,7 @@ function startRecognition(){
     document.getElementById('micStatus').textContent = 'Speech recognition is not supported in this browser. Try Chrome or Edge.';
     return;
   }
+  carryTokens = [];
   recognition = new SpeechRecognitionCtor();
   recognition.continuous = true;
   recognition.interimResults = false;
@@ -403,6 +660,7 @@ document.getElementById('activateBtn').addEventListener('click', function(){
   if(!userWantsListening){
     userWantsListening = true;
     setActivateVisual(true);
+    playAppearSfx();
     startRecognition();
   } else {
     setActivateVisual(false);
