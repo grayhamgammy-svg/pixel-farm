@@ -1,6 +1,6 @@
 {
-  "name": "Pixel Farm",
-  "short_name": "Pixel Farm",
+  "name": "Seed & Wait",
+  "short_name": "Seed & Wait",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>Pixel Farm</title>
+<title>Seed & Wait</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
 <link rel="manifest" href="manifest.json">
@@ -11,6 +11,9 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --sky-top:#8fd7f0;
@@ -700,7 +703,7 @@ if('serviceWorker' in navigator){
   <div id="skyLayer"></div>
   <div id="topbar">
     <div id="titleGroup">
-      <div id="title">🌾 PIXEL FARM</div>
+      <div id="title">🌾 SEED & WAIT</div>
       <button id="resetBtn" title="Reset game">↺</button>
       <button id="deleteModeBtn" title="Delete plants">🗑</button>
       <button id="settingsBtn" title="Settings">⚙️</button>
@@ -893,6 +896,133 @@ if('serviceWorker' in navigator){
   </div>
 </div>
 
+<style>
+  .authScreen{
+    position:fixed; inset:0; z-index:500;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden; font-family:'VT323', monospace;
+  }
+  .authBg{
+    position:absolute; inset:0; z-index:0;
+    background:linear-gradient(160deg, #2a1f14, #1a1410 60%, #0f0c08);
+    background-size:cover; background-position:center;
+  }
+  .authBg.hasImg{ filter:brightness(0.5) saturate(1.1); }
+  .authOverlay{
+    position:relative; z-index:1;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    width:100%; max-width:420px; padding:24px; box-sizing:border-box;
+    max-height:92vh; overflow-y:auto;
+  }
+  .authTitle{
+    font-family:'Press Start 2P', monospace; font-size:22px; color:#fff;
+    text-shadow:0 3px 0 #000, 0 0 20px rgba(0,0,0,.8); text-align:center;
+    letter-spacing:1px; line-height:1.4;
+  }
+  .authTitleSmall{ font-size:14px; margin-bottom:8px; }
+  .authHomeButtons{ display:flex; flex-direction:column; gap:12px; width:100%; margin-top:26px; }
+  .authBtn{
+    font-family:'Press Start 2P', monospace; font-size:13px;
+    border:none; border-radius:10px; padding:16px; cursor:pointer; width:100%;
+  }
+  .authBtnWhite{ background:#fff; color:#1a1a1a; }
+  .authBtnWhite:active{ background:#e2e2e2; }
+  .authBtnDark{ background:rgba(0,0,0,0.5); color:#fff; border:2px solid rgba(255,255,255,0.35); }
+  .authBtnDark:active{ background:rgba(0,0,0,0.7); }
+  .authBtn:disabled{ opacity:0.45; cursor:not-allowed; }
+  .authBack{
+    position:absolute; top:14px; left:14px; z-index:2;
+    font-family:'Press Start 2P', monospace; font-size:10px; color:#fff;
+    background:rgba(0,0,0,0.5); border:none; border-radius:6px; padding:10px 14px; cursor:pointer;
+  }
+  .authCard{
+    background:rgba(20,14,8,0.88); border-radius:14px; padding:22px;
+    width:100%; display:flex; flex-direction:column; box-sizing:border-box;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  .authFieldLabel{
+    font-family:'Press Start 2P', monospace; font-size:9px; color:#cfc7b8;
+    margin:12px 0 6px;
+  }
+  .authCard input[type=text], .authCard input[type=password], .authCard select{
+    font-family:'VT323', monospace; font-size:19px; padding:10px;
+    border-radius:8px; border:none; background:#2a2a2a; color:#fff; width:100%; box-sizing:border-box;
+  }
+  .authBirthdayRow{ display:flex; gap:8px; }
+  .authBirthdayRow select{ flex:1; min-width:0; }
+  .authGenderRow{ display:flex; gap:10px; }
+  .authGenderBtn{
+    flex:1; padding:14px; font-size:22px; border-radius:8px; border:2px solid #444;
+    background:#2a2a2a; color:#fff; cursor:pointer;
+  }
+  .authGenderBtn.selected{ border-color:var(--gold); background:#3a3020; }
+  .authSubmitBtn{ margin-top:20px; }
+  .authError{ color:#ff6b6b; font-size:16px; text-align:center; min-height:20px; margin-top:8px; }
+  .authLoadingText{ font-size:20px; color:#fff; margin-top:14px; }
+</style>
+
+<div id="authLoadingScreen" class="authScreen">
+  <div class="authBg"></div>
+  <div class="authOverlay">
+    <div class="authTitle">🌾 SEED & WAIT</div>
+    <div class="authLoadingText">Loading...</div>
+  </div>
+</div>
+
+<div id="authHomeScreen" class="authScreen" hidden>
+  <div class="authBg"></div>
+  <div class="authOverlay">
+    <div class="authTitle">🌾 SEED & WAIT</div>
+    <div class="authHomeButtons">
+      <button class="authBtn authBtnWhite" id="authGoSignup">Sign Up</button>
+      <button class="authBtn authBtnDark" id="authGoLogin">Log In</button>
+    </div>
+  </div>
+</div>
+
+<div id="authSignupScreen" class="authScreen" hidden>
+  <div class="authBg"></div>
+  <div class="authOverlay">
+    <button class="authBack" id="authSignupBack">← Back</button>
+    <div class="authTitle authTitleSmall">🌾 SEED & WAIT</div>
+    <div class="authCard">
+      <div class="authFieldLabel">Birthday</div>
+      <div class="authBirthdayRow">
+        <select id="authBirthMonth"></select>
+        <select id="authBirthDay"></select>
+        <select id="authBirthYear"></select>
+      </div>
+      <div class="authFieldLabel">Username</div>
+      <input type="text" id="authSignupUsername" maxlength="20" autocomplete="off" placeholder="Don't use your real name">
+      <div class="authFieldLabel">Password</div>
+      <input type="password" id="authSignupPassword" autocomplete="new-password" placeholder="At least 8 characters">
+      <div class="authFieldLabel">Gender (optional)</div>
+      <div class="authGenderRow">
+        <button type="button" class="authGenderBtn" id="authGenderF" data-gender="female">♀</button>
+        <button type="button" class="authGenderBtn" id="authGenderM" data-gender="male">♂</button>
+      </div>
+      <div class="authError" id="authSignupError" hidden></div>
+      <button class="authBtn authBtnWhite authSubmitBtn" id="authSignupSubmit">Sign Up</button>
+    </div>
+  </div>
+</div>
+
+<div id="authLoginScreen" class="authScreen" hidden>
+  <div class="authBg"></div>
+  <div class="authOverlay">
+    <button class="authBack" id="authLoginBack">← Back</button>
+    <div class="authCard">
+      <div class="authTitle authTitleSmall">Log Into Seed & Wait</div>
+      <div class="authFieldLabel">Username</div>
+      <input type="text" id="authLoginUsername" autocomplete="off" placeholder="Username">
+      <div class="authFieldLabel">Password</div>
+      <input type="password" id="authLoginPassword" autocomplete="current-password" placeholder="Password">
+      <div class="authError" id="authLoginError" hidden></div>
+      <button class="authBtn authBtnWhite authSubmitBtn" id="authLoginSubmit" disabled>Log In</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
 'use strict';
@@ -999,10 +1129,11 @@ document.addEventListener('visibilitychange', function(){
     // stamp lastSeen the moment the tab is backgrounded/closed so offline growth
     // is measured from here, not from whatever the last periodic tick happened to save
     persist();
+    try{ syncToCloud(true); }catch(e){} // bypass the throttle -- last chance to save before the tab may close
   }
 });
-window.addEventListener('pagehide', function(){ if(state) persist(); });
-window.addEventListener('beforeunload', function(){ if(state) persist(); });
+window.addEventListener('pagehide', function(){ if(state){ persist(); try{ syncToCloud(true); }catch(e){} } });
+window.addEventListener('beforeunload', function(){ if(state){ persist(); try{ syncToCloud(true); }catch(e){} } });
 
 /* ===================== REAL SOUND CLIPS ===================== */
 var REAL_AUDIO = { collect:null, plant:null, buy:null, click:null, pickup:null, growing:null, tick:null, reward:null, open:null, close:null, notify:null, mgclick:null, appear:null, start:null, green:null, equip:null, unequip:null, reveal:null, clocktick:null, change:null, race1:null, race2:null, race3:null, race4:null, wxThunder:null, wxRain:null, wxWinter:null, wxNight:null, wxBloodmoon:null, error:null, disappear:null };
@@ -1212,7 +1343,7 @@ var TYPING_SNIPPETS = [
 /* Spotlights the real UI element for each step instead of a slideshow; most
    steps auto-advance the instant the player actually performs the action. */
 var GUIDED_STEPS = [
-  { text:'Welcome to Pixel Farm! Let\'s walk through the basics together. Tap SHOP to open the seed shop.',
+  { text:'Welcome to Seed & Wait! Let\'s walk through the basics together. Tap SHOP to open the seed shop.',
     getTarget:function(){ return document.getElementById('shopBtn'); }, waitFor:'shopOpened' },
   { text:'You start with 5₥ — just enough for a Wheat Seed. Buy it!',
     getTarget:function(){ return document.querySelector('#shopBody .shopRow[data-seed-id="wheat"] .buyBtn'); }, waitFor:'seedBought' },
@@ -1413,6 +1544,7 @@ function persist(){
     localStorage.setItem(SAVE_KEY, JSON.stringify(state));
   }catch(e){}
   try{ window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(state); }catch(e){}
+  try{ syncToCloud(false); }catch(e){}
 }
 
 /* Advance every plant's growth timer by however long the page was closed. */
@@ -1618,7 +1750,7 @@ function updateTitleText(){
     var pctDecimals = state.pixels < CENT ? 3 : 2; // still shown in ₥ -> 1000ths; moved into ¢/$ -> 100ths
     titleEl.textContent = pct.toFixed(pctDecimals) + '% to $1';
   } else {
-    titleEl.textContent = '🌾 PIXEL FARM';
+    titleEl.textContent = '🌾 SEED & WAIT';
   }
 }
 
@@ -3626,7 +3758,15 @@ function start(hotData){
     // handlers below fire during the reload and persist() writes the old in-memory state
     // right back into localStorage, silently undoing the reset we just did
     state = null;
-    location.reload();
+    var finishReset = function(){ location.reload(); };
+    if(currentUid && fbDb){
+      // the cloud save is the source of truth on next login -- must actually be reset there too,
+      // and we wait for the write before reloading since it's an async network call, unlike localStorage
+      fbDb.collection('saves').doc(currentUid).set({ state: JSON.stringify(defaultState()), lastSeen: Date.now() }, { merge:true })
+        .then(finishReset).catch(finishReset);
+    } else {
+      finishReset();
+    }
   });
   resetOverlay.addEventListener('click', function(e){ if(e.target === resetOverlay){ resetOverlay.hidden = true; } });
 
@@ -3752,7 +3892,7 @@ function start(hotData){
       // Blob download in that case, which works everywhere else.
       var downloads = (window.claude && window.claude.use) ? await window.claude.use('downloads') : null;
       if(downloads){
-        var result = await downloads.save({ filename:'pixel-farm-save.json', data: raw });
+        var result = await downloads.save({ filename:'seed-and-wait-save.json', data: raw });
         if(result && result.status === 'saved'){ toast('Save file downloaded!'); }
         else { toast('Save file sent!'); }
         return;
@@ -3760,7 +3900,7 @@ function start(hotData){
       var blob = new Blob([raw], { type:'application/json' });
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
-      a.href = url; a.download = 'pixel-farm-save.json';
+      a.href = url; a.download = 'seed-and-wait-save.json';
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast('Save file downloaded!');
@@ -3804,7 +3944,13 @@ function start(hotData){
       localStorage.setItem(SAVE_KEY_BACKUP, JSON.stringify(pendingImportData));
       try{ window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(pendingImportData); }catch(e){}
       state = null; // see the same note in resetYesBtn -- prevents the outgoing persist() from clobbering the import
-      location.reload();
+      var finishImport = function(){ location.reload(); };
+      if(currentUid && fbDb){
+        fbDb.collection('saves').doc(currentUid).set({ state: JSON.stringify(pendingImportData), lastSeen: pendingImportData.lastSeen || Date.now() }, { merge:true })
+          .then(finishImport).catch(finishImport);
+      } else {
+        finishImport();
+      }
     }catch(e){ toast('Could not import save.'); }
   });
   importConfirmOverlay.addEventListener('click', function(e){ if(e.target === importConfirmOverlay){ importConfirmOverlay.hidden = true; pendingImportData = null; } });
@@ -3942,13 +4088,225 @@ function start(hotData){
   setInterval(function(){ tickCurrencyDisplay(); updateTitleText(); }, 40);
 }
 
+/* ===================== ACCOUNTS (Firebase) ===================== */
+var EMAIL_DOMAIN = '@seedandwait.local'; // synthetic -- lets players log in with just a username, no real email needed
+var currentUid = null;
+var fbAuth = null, fbDb = null;
+var lastCloudSyncAt = 0;
+var CLOUD_SYNC_MIN_GAP_MS = 30000; // throttle cloud writes to at most once per 30s during normal play
+
+var BAD_USERNAME_WORDS = ['fuck','shit','bitch','ass','dick','pussy','cunt','nigger','nigga','fag','rape','sex','porn','whore','slut','retard'];
+function usernameHasBadWord(name){
+  var lower = name.toLowerCase();
+  for(var i=0;i<BAD_USERNAME_WORDS.length;i++){ if(lower.indexOf(BAD_USERNAME_WORDS[i]) >= 0) return true; }
+  return false;
+}
+function usernameToEmail(username){ return username.trim().toLowerCase() + EMAIL_DOMAIN; }
+
+function showAuthScreen(id){
+  ['authLoadingScreen','authHomeScreen','authSignupScreen','authLoginScreen'].forEach(function(s){
+    document.getElementById(s).hidden = (s !== id);
+  });
+}
+function showAuthError(prefix, msg){
+  var el = document.getElementById(prefix + 'Error');
+  el.textContent = msg;
+  el.hidden = false;
+}
+function clearAuthError(prefix){
+  document.getElementById(prefix + 'Error').hidden = true;
+}
+function populateBirthdayDropdowns(){
+  var monthSel = document.getElementById('authBirthMonth');
+  var daySel = document.getElementById('authBirthDay');
+  var yearSel = document.getElementById('authBirthYear');
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var mh = '<option value="">Month</option>';
+  months.forEach(function(m,i){ mh += '<option value="'+(i+1)+'">'+m+'</option>'; });
+  monthSel.innerHTML = mh;
+  var dh = '<option value="">Day</option>';
+  for(var d=1; d<=31; d++){ dh += '<option value="'+d+'">'+d+'</option>'; }
+  daySel.innerHTML = dh;
+  var thisYear = new Date().getFullYear();
+  var yh = '<option value="">Year</option>';
+  for(var y=thisYear; y>=thisYear-100; y--){ yh += '<option value="'+y+'">'+y+'</option>'; }
+  yearSel.innerHTML = yh;
+}
+var selectedGender = null;
+
+function beginGameWithState(loadedStateObj){
+  showAuthScreen(null);
+  ['authLoadingScreen','authHomeScreen','authSignupScreen','authLoginScreen'].forEach(function(s){
+    document.getElementById(s).hidden = true;
+  });
+  start(loadedStateObj);
+}
+
+function syncToCloud(force){
+  if(!currentUid || !state || !fbDb) return;
+  var now = Date.now();
+  if(!force && (now - lastCloudSyncAt) < CLOUD_SYNC_MIN_GAP_MS) return;
+  lastCloudSyncAt = now;
+  try{
+    fbDb.collection('saves').doc(currentUid).set({
+      state: JSON.stringify(state),
+      lastSeen: state.lastSeen || now
+    }, { merge: true }).catch(function(){});
+  }catch(e){}
+}
+
+function doSignup(){
+  clearAuthError('authSignup');
+  var month = document.getElementById('authBirthMonth').value;
+  var day = document.getElementById('authBirthDay').value;
+  var year = document.getElementById('authBirthYear').value;
+  var username = document.getElementById('authSignupUsername').value.trim();
+  var password = document.getElementById('authSignupPassword').value;
+
+  if(!month || !day || !year){ showAuthError('authSignup', 'Please enter your full birthday.'); return; }
+  if(!/^[A-Za-z0-9_]{3,20}$/.test(username)){ showAuthError('authSignup', 'Username must be 3-20 letters, numbers, or underscores.'); return; }
+  if(usernameHasBadWord(username)){ showAuthError('authSignup', 'That username isn\'t allowed.'); return; }
+  if(password.length < 8){ showAuthError('authSignup', 'Password must be at least 8 characters.'); return; }
+
+  var submitBtn = document.getElementById('authSignupSubmit');
+  submitBtn.disabled = true;
+  var email = usernameToEmail(username);
+
+  fbAuth.createUserWithEmailAndPassword(email, password).then(function(cred){
+    var uid = cred.user.uid;
+    return fbDb.collection('usernames').doc(username.toLowerCase()).set({ uid: uid })
+      .then(function(){
+        var freshState = defaultState();
+        return fbDb.collection('saves').doc(uid).set({
+          username: username,
+          birthday: month+'/'+day+'/'+year,
+          gender: selectedGender,
+          state: JSON.stringify(freshState),
+          lastSeen: Date.now()
+        });
+      })
+      .then(function(){
+        currentUid = uid;
+        beginGameWithState(defaultState());
+      })
+      .catch(function(err){
+        return cred.user.delete().then(function(){ throw err; });
+      });
+  }).catch(function(err){
+    submitBtn.disabled = false;
+    if(err && (err.code === 'auth/email-already-in-use' || err.code === 'permission-denied')){ showAuthError('authSignup', 'That username is already taken.'); }
+    else if(err && err.code === 'auth/weak-password'){ showAuthError('authSignup', 'Password must be at least 8 characters.'); }
+    else { showAuthError('authSignup', 'Something went wrong. Try again.'); }
+  });
+}
+
+function doLogin(){
+  clearAuthError('authLogin');
+  var username = document.getElementById('authLoginUsername').value.trim();
+  var password = document.getElementById('authLoginPassword').value;
+  var submitBtn = document.getElementById('authLoginSubmit');
+  submitBtn.disabled = true;
+  var email = usernameToEmail(username);
+
+  fbAuth.signInWithEmailAndPassword(email, password).then(function(cred){
+    var uid = cred.user.uid;
+    currentUid = uid;
+    return fbDb.collection('saves').doc(uid).get();
+  }).then(function(doc){
+    var loadedState;
+    if(doc.exists){
+      var data = doc.data();
+      loadedState = JSON.parse(data.state);
+      if(typeof loadedState.lastSeen !== 'number') loadedState.lastSeen = data.lastSeen || Date.now();
+    } else {
+      loadedState = defaultState();
+    }
+    beginGameWithState(loadedState);
+  }).catch(function(err){
+    submitBtn.disabled = false;
+    if(err && (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential')){
+      showAuthError('authLogin', 'Incorrect username or password.');
+    } else {
+      showAuthError('authLogin', 'Something went wrong. Try again.');
+    }
+  });
+}
+
+function initAuthUI(){
+  populateBirthdayDropdowns();
+  document.getElementById('authGoSignup').addEventListener('click', function(){ showAuthScreen('authSignupScreen'); });
+  document.getElementById('authGoLogin').addEventListener('click', function(){ showAuthScreen('authLoginScreen'); });
+  document.getElementById('authSignupBack').addEventListener('click', function(){ showAuthScreen('authHomeScreen'); });
+  document.getElementById('authLoginBack').addEventListener('click', function(){ showAuthScreen('authHomeScreen'); });
+
+  document.getElementById('authGenderF').addEventListener('click', function(){
+    selectedGender = 'female';
+    document.getElementById('authGenderF').classList.add('selected');
+    document.getElementById('authGenderM').classList.remove('selected');
+  });
+  document.getElementById('authGenderM').addEventListener('click', function(){
+    selectedGender = 'male';
+    document.getElementById('authGenderM').classList.add('selected');
+    document.getElementById('authGenderF').classList.remove('selected');
+  });
+
+  var loginUserEl = document.getElementById('authLoginUsername');
+  var loginPassEl = document.getElementById('authLoginPassword');
+  var loginBtn = document.getElementById('authLoginSubmit');
+  function refreshLoginBtn(){ loginBtn.disabled = !(loginUserEl.value.trim() && loginPassEl.value); }
+  loginUserEl.addEventListener('input', refreshLoginBtn);
+  loginPassEl.addEventListener('input', refreshLoginBtn);
+
+  document.getElementById('authSignupSubmit').addEventListener('click', doSignup);
+  document.getElementById('authLoginSubmit').addEventListener('click', doLogin);
+}
+
 try{
   if(window.claude && window.claude.hot && window.claude.hot.ready){
     window.claude.hot.ready(start);
+  } else if(window.claude && window.claude.hot){
+    start(window.claude.hot.data || null);
   } else {
-    start((window.claude && window.claude.hot && window.claude.hot.data) || null);
+    var firebaseConfig = {
+      apiKey: "AIzaSyDzeTAZ0u7MnFJeb1LjoLgEh9b8X4Bn768",
+      authDomain: "seed-and-wait.firebaseapp.com",
+      projectId: "seed-and-wait",
+      storageBucket: "seed-and-wait.firebasestorage.app",
+      messagingSenderId: "1066399791306",
+      appId: "1:1066399791306:web:5fb48a8d2eaff45d4edc33"
+    };
+    firebase.initializeApp(firebaseConfig);
+    fbAuth = firebase.auth();
+    fbDb = firebase.firestore();
+    initAuthUI();
+    showAuthScreen('authLoadingScreen');
+    fbAuth.onAuthStateChanged(function(user){
+      if(user){
+        currentUid = user.uid;
+        fbDb.collection('saves').doc(user.uid).get().then(function(doc){
+          var loadedState;
+          if(doc.exists){
+            var data = doc.data();
+            loadedState = JSON.parse(data.state);
+            if(typeof loadedState.lastSeen !== 'number') loadedState.lastSeen = data.lastSeen || Date.now();
+          } else {
+            loadedState = defaultState();
+          }
+          beginGameWithState(loadedState);
+        }).catch(function(){
+          currentUid = null;
+          showAuthScreen('authHomeScreen');
+        });
+      } else {
+        showAuthScreen('authHomeScreen');
+      }
+    });
   }
-}catch(e){ start(null); }
+}catch(e){
+  // Firebase blocked/unavailable (offline, network policy, etc.) -- fall back to local-only play
+  try{ showAuthScreen(null); document.getElementById('authLoadingScreen').hidden = true; }catch(e2){}
+  start(null);
+}
 
 })();
 </script>
