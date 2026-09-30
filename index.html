@@ -728,6 +728,8 @@ if('serviceWorker' in navigator){
         <button class="bigBtn" id="lowerLagToggleBtn" style="width:100%; margin-bottom:18px;">🐢 Lower Lag: OFF</button>
         <div class="gSub" id="harvestAddonSettingRow" hidden style="margin-bottom:8px;">Harvest Addon</div>
         <button class="bigBtn" id="harvestAddonToggleBtn" hidden style="width:100%; margin-bottom:18px;">✅ Partial Harvest: ON</button>
+        <div class="gSub" style="margin-bottom:8px;">Account</div>
+        <button class="bigBtn" id="changePasswordBtn" style="width:100%; margin-bottom:18px;">CHANGE PASSWORD</button>
         <div class="gSub" style="margin-bottom:8px;">Save Data</div>
         <div style="display:flex; gap:10px; justify-content:center; margin-bottom:6px;">
           <button class="bigBtn" id="exportSaveBtn" style="background:var(--green-glow); border-color:#2f8f2f; box-shadow:0 5px 0 #2f8f2f;">EXPORT SAVE</button>
@@ -931,7 +933,7 @@ if('serviceWorker' in navigator){
   }
   .authBgLayer{
     position:absolute; inset:0; background-size:cover; background-position:center;
-    opacity:0; transition:opacity 1.8s ease-in-out; filter:brightness(0.5) saturate(1.1);
+    opacity:0; transition:opacity 1.8s ease-in-out;
   }
   .authBgLayer.show{ opacity:1; }
   .authOverlay{
@@ -947,6 +949,17 @@ if('serviceWorker' in navigator){
   }
   .authTitleSmall{ font-size:14px; margin-bottom:8px; }
   .authHomeButtons{ display:flex; flex-direction:column; gap:12px; width:100%; margin-top:26px; }
+  .authTopRow{
+    display:flex; align-items:center; justify-content:center; gap:24px;
+    width:100%; flex-wrap:wrap;
+  }
+  .authTitleBlock{ flex:1; min-width:220px; display:flex; flex-direction:column; align-items:flex-start; }
+  .authTitleBlock .authTitle{ text-align:left; }
+  .authPreviewBox{
+    flex:none; width:180px; height:180px; position:relative;
+    border:4px solid var(--panel-edge); border-radius:14px; overflow:hidden;
+    box-shadow:0 6px 0 rgba(0,0,0,.4); background:#000;
+  }
   .authBtn{
     font-family:'Press Start 2P', monospace; font-size:13px;
     border:none; border-radius:10px; padding:16px; cursor:pointer; width:100%;
@@ -990,18 +1003,28 @@ if('serviceWorker' in navigator){
 <div id="authLoadingScreen" class="authScreen">
   <div class="authBg"></div>
   <div class="authOverlay">
-    <div class="authTitle">🌾 SEED & WAIT</div>
-    <div class="authLoadingText">Loading...</div>
+    <div class="authTopRow">
+      <div class="authTitleBlock">
+        <div class="authTitle">🌾 SEED & WAIT</div>
+        <div class="authLoadingText">Loading...</div>
+      </div>
+      <div class="authPreviewBox" data-authpreview></div>
+    </div>
   </div>
 </div>
 
 <div id="authHomeScreen" class="authScreen" hidden>
   <div class="authBg"></div>
   <div class="authOverlay">
-    <div class="authTitle">🌾 SEED & WAIT</div>
-    <div class="authHomeButtons">
-      <button class="authBtn authBtnWhite" id="authGoSignup">Sign Up</button>
-      <button class="authBtn authBtnDark" id="authGoLogin">Log In</button>
+    <div class="authTopRow">
+      <div class="authTitleBlock">
+        <div class="authTitle">🌾 SEED & WAIT</div>
+        <div class="authHomeButtons">
+          <button class="authBtn authBtnWhite" id="authGoSignup">Sign Up</button>
+          <button class="authBtn authBtnDark" id="authGoLogin">Log In</button>
+        </div>
+      </div>
+      <div class="authPreviewBox" data-authpreview></div>
     </div>
   </div>
 </div>
@@ -1010,7 +1033,10 @@ if('serviceWorker' in navigator){
   <div class="authBg"></div>
   <div class="authOverlay">
     <button class="authBack" id="authSignupBack">← Back</button>
-    <div class="authTitle authTitleSmall">🌾 SEED & WAIT</div>
+    <div class="authTopRow">
+      <div class="authTitleBlock"><div class="authTitle authTitleSmall">🌾 SEED & WAIT</div></div>
+      <div class="authPreviewBox" data-authpreview></div>
+    </div>
     <div class="authCard">
       <div class="authFieldLabel">Birthday</div>
       <div class="authBirthdayRow">
@@ -1037,8 +1063,11 @@ if('serviceWorker' in navigator){
   <div class="authBg"></div>
   <div class="authOverlay">
     <button class="authBack" id="authLoginBack">← Back</button>
+    <div class="authTopRow">
+      <div class="authTitleBlock"><div class="authTitle authTitleSmall">Log Into Seed & Wait</div></div>
+      <div class="authPreviewBox" data-authpreview></div>
+    </div>
     <div class="authCard">
-      <div class="authTitle authTitleSmall">Log Into Seed & Wait</div>
       <div class="authFieldLabel">Username</div>
       <input type="text" id="authLoginUsername" autocomplete="off" placeholder="Username">
       <div class="authFieldLabel">Password</div>
@@ -1494,7 +1523,7 @@ function defaultState(){
     expandCost:DOLLAR, mysteryRevealCost:CENT, mysteryRevealed:[], mysteryOwnedEver:[], milestoneUnlocked:false,
     titleShowingMilestone:false,
     colorChangeUnlocked:{}, nameChangeUnlocked:{}, plantColorHue:{}, nameColorHue:{}, customSeedNames:{}, tutorialSeen:false,
-    nerfedWheatSeeds:0,
+    nerfedWheatSeeds:0, settingsLockPin:null,
     musicMuted:false, lowerLagMode:false,
     abilityShop:{ merge:false, harvestAddon:false }, harvestAddonSettingOn:true,
     weather:{ current:'sunny', endsAt:0, cooldownUntil:0, nextRainAt:Date.now()+RAIN_INTERVAL, rollAt:0,
@@ -2705,6 +2734,77 @@ function openColorFlow(seed){
   }
 }
 
+var settingsPinUnlockedThisSession = false;
+var INPUT_STYLE = "width:100%; font-family:'VT323',monospace; font-size:20px; padding:8px; border-radius:6px; border:2px solid var(--panel-edge); background:#fffdf5; color:var(--ink); box-sizing:border-box; margin-bottom:10px;";
+function openChangePasswordFlow(){
+  SFX.notify();
+  customizeOverlay.hidden = false;
+  if(state.settingsLockPin && !settingsPinUnlockedThisSession){
+    customizeTitle.textContent = 'ENTER PIN';
+    customizeBody.innerHTML =
+      '<div class="gDesc">This setting is locked. Enter the PIN to continue.</div>' +
+      '<input type="password" id="cpwPinInput" maxlength="12" style="'+INPUT_STYLE+'">' +
+      '<div class="gSub" id="cpwPinError" style="color:var(--danger); min-height:18px;"></div>' +
+      '<button class="bigBtn" id="cpwUnlockBtn" style="margin-top:8px; width:100%;">UNLOCK</button>';
+    document.getElementById('cpwUnlockBtn').addEventListener('click', function(){
+      var typed = document.getElementById('cpwPinInput').value;
+      if(typed && typed === state.settingsLockPin){
+        SFX.click();
+        settingsPinUnlockedThisSession = true;
+        openChangePasswordFlow();
+      } else {
+        SFX.error();
+        document.getElementById('cpwPinError').textContent = 'Wrong PIN.';
+      }
+    });
+  } else {
+    customizeTitle.textContent = 'CHANGE PASSWORD';
+    var lockLabel = state.settingsLockPin ? 'Change or clear the lock PIN' : 'Lock this setting with a PIN (optional)';
+    customizeBody.innerHTML =
+      '<input type="password" id="cpwCurrent" autocomplete="current-password" placeholder="Current password" style="'+INPUT_STYLE+'">' +
+      '<input type="password" id="cpwNew" autocomplete="new-password" placeholder="New password (8+ characters)" style="'+INPUT_STYLE+'">' +
+      '<input type="password" id="cpwConfirm" autocomplete="new-password" placeholder="Confirm new password" style="'+INPUT_STYLE+'">' +
+      '<div class="gSub" id="cpwError" style="color:var(--danger); min-height:18px; margin-bottom:6px;"></div>' +
+      '<button class="bigBtn" id="cpwSubmitBtn" style="width:100%; margin-bottom:18px;">UPDATE PASSWORD</button>' +
+      '<div style="border-top:2px solid var(--panel-edge); padding-top:14px;">' +
+        '<div class="gSub" style="margin-bottom:8px;">'+lockLabel+'</div>' +
+        '<input type="password" id="cpwPinNew" maxlength="12" placeholder="New PIN (leave blank to remove)" style="'+INPUT_STYLE+'">' +
+        '<button class="bigBtn" id="cpwPinSaveBtn" style="width:100%;">SAVE LOCK</button>' +
+      '</div>';
+    document.getElementById('cpwSubmitBtn').addEventListener('click', function(){
+      var cur = document.getElementById('cpwCurrent').value;
+      var next = document.getElementById('cpwNew').value;
+      var confirmVal = document.getElementById('cpwConfirm').value;
+      var errEl = document.getElementById('cpwError');
+      errEl.textContent = '';
+      if(next.length < 8){ errEl.textContent = 'New password must be at least 8 characters.'; return; }
+      if(next !== confirmVal){ errEl.textContent = 'New passwords do not match.'; return; }
+      if(!fbAuth || !fbAuth.currentUser){ errEl.textContent = 'Not logged in.'; return; }
+      var user = fbAuth.currentUser;
+      var cred = firebase.auth.EmailAuthProvider.credential(user.email, cur);
+      user.reauthenticateWithCredential(cred).then(function(){
+        return user.updatePassword(next);
+      }).then(function(){
+        SFX.buy();
+        toast('Password updated!');
+        customizeOverlay.hidden = true;
+      }).catch(function(err){
+        if(err && (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential')){ errEl.textContent = 'Current password is incorrect.'; }
+        else { errEl.textContent = 'Something went wrong. Try again.'; }
+      });
+    });
+    document.getElementById('cpwPinSaveBtn').addEventListener('click', function(){
+      var newPin = document.getElementById('cpwPinNew').value;
+      state.settingsLockPin = newPin ? newPin : null;
+      persist();
+      SFX.change();
+      toast(newPin ? 'Lock PIN saved.' : 'Lock PIN removed.');
+      settingsPinUnlockedThisSession = true; // already proved account ownership just now
+      openChangePasswordFlow();
+    });
+  }
+}
+
 function openNameFlow(seed){
   SFX.notify();
   customizeOverlay.hidden = false;
@@ -3759,7 +3859,26 @@ function start(hotData){
 
   var resetOverlay = document.getElementById('resetOverlay');
   document.getElementById('logoutBtn').addEventListener('click', function(){ SFX.click(); logoutAccount(); });
-  document.getElementById('sessionReconnectBtn').addEventListener('click', function(){ SFX.click(); resumeAfterReconnect(); });
+  document.getElementById('changePasswordBtn').addEventListener('click', function(){ SFX.click(); openChangePasswordFlow(); });
+  document.getElementById('sessionReconnectBtn').addEventListener('click', function(){
+    SFX.click();
+    var btn = document.getElementById('sessionReconnectBtn');
+    if(btn.disabled) return;
+    btn.disabled = true;
+    var remaining = 8;
+    btn.textContent = 'RECONNECTING... ' + remaining + 's';
+    var countdown = setInterval(function(){
+      remaining--;
+      if(remaining <= 0){
+        clearInterval(countdown);
+        btn.textContent = 'RECONNECT';
+        btn.disabled = false;
+        resumeAfterReconnect();
+      } else {
+        btn.textContent = 'RECONNECTING... ' + remaining + 's';
+      }
+    }, 1000);
+  });
   document.getElementById('sessionLogoutBtn').addEventListener('click', function(){ SFX.click(); logoutAccount(); });
   document.getElementById('resetBtn').addEventListener('click', function(){
     SFX.click();
@@ -4137,6 +4256,11 @@ function showAuthScreen(id){
   ['authLoadingScreen','authHomeScreen','authSignupScreen','authLoginScreen'].forEach(function(s){
     document.getElementById(s).hidden = (s !== id);
   });
+  // belt-and-suspenders: make sure no leftover game panel can peek through behind an auth screen
+  ['gameOverlay','shopOverlay','settingsOverlay','customizeOverlay','abilityShopOverlay','sessionPausedOverlay'].forEach(function(s){
+    var el = document.getElementById(s);
+    if(el) el.hidden = true;
+  });
 }
 function showAuthError(prefix, msg){
   var el = document.getElementById(prefix + 'Error');
@@ -4338,8 +4462,8 @@ function setupAuthBgSlideshow(container, images, startOffset){
   }, 5000);
 }
 function initAuthBackgrounds(){
-  var bgEls = document.querySelectorAll('.authBg');
-  bgEls.forEach(function(el, i){
+  var boxEls = document.querySelectorAll('.authPreviewBox');
+  boxEls.forEach(function(el, i){
     setupAuthBgSlideshow(el, AUTH_BG_IMAGES, i * 3);
   });
 }
