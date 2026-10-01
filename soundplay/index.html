@@ -853,41 +853,18 @@ function playSound(sound){
   audio.play().catch(function(){ release(); });
 }
 
-/* window.speechSynthesis is a single shared queue -- calling .speak() again while one
-   utterance is still going makes the next one WAIT instead of overlapping. Each iframe
-   gets its own independent speechSynthesis queue, so running every AI-voice utterance in
-   its own short-lived hidden iframe lets several play at once, same as regular sounds. */
+/* AI voice sounds queue one after another rather than overlapping. window.speechSynthesis
+   is a single shared voice engine, and giving each utterance its own JS queue (e.g. via a
+   hidden iframe) was tried and confirmed NOT to produce real overlapping audio -- the
+   underlying speech engine itself only renders one utterance at a time regardless of how
+   many separate queues call it. True overlap would need actual pre-rendered audio files
+   (like every other sound type here), which the free built-in browser voice can't produce. */
 function speakOverlapping(text, rate){
-  if(!text) return;
+  if(!text || !window.speechSynthesis) return;
   try{
-    if(!window.speechSynthesis){ return; }
-    var iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.setAttribute('aria-hidden', 'true');
-    document.body.appendChild(iframe);
-    var win = iframe.contentWindow;
-    if(!win || !win.speechSynthesis || !win.SpeechSynthesisUtterance){
-      try{ document.body.removeChild(iframe); }catch(e){}
-      // fall back to the main page's queue -- still speaks, just won't overlap others
-      try{
-        var fallback = new SpeechSynthesisUtterance(text);
-        fallback.rate = rate;
-        speechSynthesis.speak(fallback);
-      }catch(e){}
-      return;
-    }
-    var cleaned = false;
-    function cleanup(){
-      if(cleaned) return;
-      cleaned = true;
-      try{ document.body.removeChild(iframe); }catch(e){}
-    }
-    var utter = new win.SpeechSynthesisUtterance(text);
+    var utter = new SpeechSynthesisUtterance(text);
     utter.rate = rate;
-    utter.onend = cleanup;
-    utter.onerror = cleanup;
-    win.speechSynthesis.speak(utter);
-    setTimeout(cleanup, 15000); // safety net in case the end event never fires
+    speechSynthesis.speak(utter);
   }catch(e){}
 }
 function flashWordRow(wordId){
