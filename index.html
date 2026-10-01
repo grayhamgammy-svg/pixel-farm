@@ -350,6 +350,26 @@ if('serviceWorker' in navigator){
     border:2px solid var(--panel-edge); border-radius:6px;
     padding:3px 6px; white-space:nowrap; z-index:2;
   }
+  .tile .timer.timer-cycle-5d{ animation:timerCycle5d 4.5s linear infinite; }
+  @keyframes timerCycle5d{
+    0%{ color:#a855f7; }
+    33%{ color:#4b1d78; }
+    66%{ color:#ffffff; }
+    100%{ color:#a855f7; }
+  }
+  .tile .timer.timer-cycle-10d{ animation:timerCycle10d 4.5s linear infinite; }
+  @keyframes timerCycle10d{
+    0%{ color:#ff4d4d; }
+    33%{ color:#ff9933; }
+    66%{ color:#ffee58; }
+    100%{ color:#ff4d4d; }
+  }
+  .tile .timer.timer-cycle-30d{ animation:timerCycle30d 3s linear infinite; }
+  @keyframes timerCycle30d{
+    0%{ color:#b35900; }
+    50%{ color:#000000; }
+    100%{ color:#b35900; }
+  }
   .tile .seedLabel{
     position:absolute; top:-29px; left:50%; transform:translateX(-50%);
     font-family:'Press Start 2P', monospace; font-size:7px;
@@ -1296,21 +1316,21 @@ var SEED_TYPES = [
   { id:'goldapple', name:'Golden Apple Seed', icon:'🍏', plant:'🍏', rarity:'legendary', hidden:false,
     price:6250, fruitValue:0.150, maxGrowth:Infinity, seedSizeBoostRange:[1,1.55], fruitRange:[3,10], extraVariantBonus:1.30, growthDivisor:1000, secondSpeedBoost:1.00 },
   { id:'starfruit', name:'Starfruit Seed', icon:'⭐', plant:'⭐', rarity:'mythic', hidden:true,
-    price:15000, fruitValue:0.225, maxGrowth:Infinity, seedSizeBoostRange:[1,1.75], fruitRange:[1,12], extraVariantBonus:2.00, growthDivisor:800, secondSpeedBoost:1.30 },
+    price:150000, fruitValue:0.225, maxGrowth:Infinity, seedSizeBoostRange:[1,1.75], fruitRange:[1,12], extraVariantBonus:2.00, growthDivisor:800, secondSpeedBoost:1.30 },
   { id:'cosmiccactus', name:'Cosmic Cactus Seed', icon:'🌵', plant:'🌵', rarity:'mythic', hidden:true,
-    price:25000, fruitValue:0.338, maxGrowth:Infinity, seedSizeBoostRange:[1,1.65], fruitRange:[5,20], extraVariantBonus:2.50, growthDivisor:700, secondSpeedBoost:1.50 },
+    price:250000, fruitValue:0.338, maxGrowth:Infinity, seedSizeBoostRange:[1,1.65], fruitRange:[5,20], extraVariantBonus:2.50, growthDivisor:700, secondSpeedBoost:1.50 },
   { id:'wiltedflower', name:'Wilted Flower Seed', icon:'🥀', plant:'🥀', rarity:'mythic', hidden:true,
-    price:27500, fruitValue:0.550, maxGrowth:Infinity, seedSizeBoostRange:[1,2.75], fruitRange:[1,35], extraVariantBonus:1.80, growthDivisor:850, secondSpeedBoost:1.15 },
+    price:275000, fruitValue:0.550, maxGrowth:Infinity, seedSizeBoostRange:[1,2.75], fruitRange:[1,35], extraVariantBonus:1.80, growthDivisor:850, secondSpeedBoost:1.15 },
   { id:'tulip', name:'Tulip Seed', icon:'🌷', plant:'🌷', rarity:'mythic', hidden:true,
-    price:31250, fruitValue:0.620, maxGrowth:Infinity, seedSizeBoostRange:[1,1.5], fruitRange:[1,15], extraVariantBonus:1.60, growthDivisor:900, secondSpeedBoost:1.35 },
+    price:312500, fruitValue:0.620, maxGrowth:Infinity, seedSizeBoostRange:[1,1.5], fruitRange:[1,15], extraVariantBonus:1.60, growthDivisor:900, secondSpeedBoost:1.35 },
   { id:'blossom', name:'Blossom Seed', icon:'🌼', plant:'🌼', rarity:'mythic', hidden:true,
-    price:35000, fruitValue:0.850, maxGrowth:Infinity, seedSizeBoostRange:[1,3], fruitRange:[1,13], extraVariantBonus:2.00, growthDivisor:800, secondSpeedBoost:1.25 },
+    price:350000, fruitValue:0.850, maxGrowth:Infinity, seedSizeBoostRange:[1,3], fruitRange:[1,13], extraVariantBonus:2.00, growthDivisor:800, secondSpeedBoost:1.25 },
   { id:'rose', name:'Rose Seed', icon:'🌹', plant:'🌹', rarity:'mythic', hidden:true,
-    price:40000, fruitValue:1.100, maxGrowth:Infinity, seedSizeBoostRange:[1,3.2], fruitRange:[1,10], extraVariantBonus:2.25, growthDivisor:700, secondSpeedBoost:1.10 },
+    price:400000, fruitValue:1.100, maxGrowth:Infinity, seedSizeBoostRange:[1,3.2], fruitRange:[1,10], extraVariantBonus:2.25, growthDivisor:700, secondSpeedBoost:1.10 },
   { id:'moonflower', name:'Hibiscus Seed', icon:'🌺', plant:'🌺', rarity:'legendary', hidden:true,
     price:12500, fruitValue:0.200, maxGrowth:Infinity, seedSizeBoostRange:[1,5.0], fruitRange:[1,17], extraVariantBonus:2.15, growthDivisor:700, secondSpeedBoost:1.20 },
   { id:'lotus', name:'Lotus Seed', icon:'🪷', plant:'🪷', rarity:'mythic', hidden:true,
-    price:50000, fruitValue:1.650, maxGrowth:Infinity, seedSizeBoostRange:[1,6.0], fruitRange:[1,18], extraVariantBonus:2.50, growthDivisor:600, secondSpeedBoost:1.25 },
+    price:500000, fruitValue:1.650, maxGrowth:Infinity, seedSizeBoostRange:[1,6.0], fruitRange:[1,18], extraVariantBonus:2.50, growthDivisor:600, secondSpeedBoost:1.25 },
   { id:'hyacinth', name:'Hyacinth Seed', icon:'🪻', plant:'🪻', rarity:'legendary', hidden:true,
     price:21250, fruitValue:0.240, maxGrowth:Infinity, seedSizeBoostRange:[1,3.0], fruitRange:[1,30], extraVariantBonus:1.15, growthDivisor:1000, secondSpeedBoost:1.05 },
   { id:'fourleafclover', name:'Four-Leaf Clover Seed', icon:'🍀', plant:'🍀', rarity:'legendary', hidden:true,
@@ -1328,35 +1348,35 @@ var SEED_TYPES = [
   { id:'strawberry', name:'Strawberry Seed', icon:'🍓', plant:'🍓', rarity:'legendary', hidden:true,
     price:21250, fruitValue:0.200, maxGrowth:Infinity, seedSizeBoostRange:[1,1.25], fruitRange:[1,8], extraVariantBonus:1.20, growthDivisor:1000, secondSpeedBoost:1.30 },
   { id:'blueberry', name:'Blueberry Seed', icon:'🫐', plant:'🫐', rarity:'mythic', hidden:true,
-    price:30000, fruitValue:0.700, maxGrowth:Infinity, seedSizeBoostRange:[1,1.45], fruitRange:[1,20], extraVariantBonus:1.70, growthDivisor:780, secondSpeedBoost:1.30 },
+    price:300000, fruitValue:0.700, maxGrowth:Infinity, seedSizeBoostRange:[1,1.45], fruitRange:[1,20], extraVariantBonus:1.70, growthDivisor:780, secondSpeedBoost:1.30 },
   { id:'cherries', name:'Cherries Seed', icon:'🍒', plant:'🍒', rarity:'mythic', hidden:true,
-    price:133750, fruitValue:0.900, maxGrowth:Infinity, seedSizeBoostRange:[1,1.55], fruitRange:[1,18], extraVariantBonus:1.85, growthDivisor:760, secondSpeedBoost:1.20 },
+    price:1337500, fruitValue:0.900, maxGrowth:Infinity, seedSizeBoostRange:[1,1.55], fruitRange:[1,18], extraVariantBonus:1.85, growthDivisor:760, secondSpeedBoost:1.20 },
   { id:'redapple', name:'Red Apple Seed', icon:'🍎', plant:'🍎', rarity:'legendary', hidden:true,
     price:23750, fruitValue:0.350, maxGrowth:Infinity, seedSizeBoostRange:[1,1.35], fruitRange:[1,25], extraVariantBonus:1.10, growthDivisor:870, secondSpeedBoost:1.10 },
   { id:'avocado', name:'Avocado Seed', icon:'🥑', plant:'🥑', rarity:'mythic', hidden:true,
-    price:36250, fruitValue:1.200, maxGrowth:Infinity, seedSizeBoostRange:[1,1.8], fruitRange:[1,7], extraVariantBonus:1.90, growthDivisor:700, secondSpeedBoost:1.05 },
+    price:362500, fruitValue:1.200, maxGrowth:Infinity, seedSizeBoostRange:[1,1.8], fruitRange:[1,7], extraVariantBonus:1.90, growthDivisor:700, secondSpeedBoost:1.05 },
   { id:'hotpepper', name:'Hot Pepper Seed', icon:'🌶️', plant:'🌶️', rarity:'mythic', hidden:true,
-    price:37500, fruitValue:0.800, maxGrowth:Infinity, seedSizeBoostRange:[1,1.6], fruitRange:[1,8], extraVariantBonus:2.10, growthDivisor:650, secondSpeedBoost:1.60 },
+    price:375000, fruitValue:0.800, maxGrowth:Infinity, seedSizeBoostRange:[1,1.6], fruitRange:[1,8], extraVariantBonus:2.10, growthDivisor:650, secondSpeedBoost:1.60 },
   { id:'broccoli', name:'Broccoli Seed', icon:'🥦', plant:'🥦', rarity:'mythic', hidden:true,
-    price:32500, fruitValue:0.950, maxGrowth:Infinity, seedSizeBoostRange:[1,8.5], fruitRange:[1,13], extraVariantBonus:1.60, growthDivisor:720, secondSpeedBoost:1.10 },
+    price:325000, fruitValue:0.950, maxGrowth:Infinity, seedSizeBoostRange:[1,8.5], fruitRange:[1,13], extraVariantBonus:1.60, growthDivisor:720, secondSpeedBoost:1.10 },
   { id:'leafygreen', name:'Leafy Green Seed', icon:'🥬', plant:'🥬', rarity:'mythic', hidden:true,
-    price:28750, fruitValue:0.720, maxGrowth:Infinity, seedSizeBoostRange:[1,1.65], fruitRange:[1,40], extraVariantBonus:1.45, growthDivisor:760, secondSpeedBoost:1.35 },
+    price:287500, fruitValue:0.720, maxGrowth:Infinity, seedSizeBoostRange:[1,1.65], fruitRange:[1,40], extraVariantBonus:1.45, growthDivisor:760, secondSpeedBoost:1.35 },
   { id:'chestnut', name:'Chestnut Seed', icon:'🌰', plant:'🌰', rarity:'legendary', hidden:true,
     price:25000, fruitValue:0.650, maxGrowth:Infinity, seedSizeBoostRange:[1,5.0], fruitRange:[1,28], extraVariantBonus:1.25, growthDivisor:780, secondSpeedBoost:1.00 },
   { id:'beanstalk', name:'Beanstalk Seed', icon:'🫛', plant:'🫛', rarity:'mythic', hidden:true,
-    price:550000, fruitValue:1.500, maxGrowth:Infinity, seedSizeBoostRange:[1,20.0], fruitRange:[1,95], extraVariantBonus:2.30, growthDivisor:500, secondSpeedBoost:1.20 },
+    price:5500000, fruitValue:1.500, maxGrowth:Infinity, seedSizeBoostRange:[1,20.0], fruitRange:[1,95], extraVariantBonus:2.30, growthDivisor:500, secondSpeedBoost:1.20 },
   { id:'watermelon', name:'Watermelon Seed', icon:'🍉', plant:'🍉', rarity:'legendary', hidden:true,
     price:26250, fruitValue:0.700, maxGrowth:Infinity, seedSizeBoostRange:[1,5.5], fruitRange:[1,5], extraVariantBonus:1.20, growthDivisor:820, secondSpeedBoost:1.15 },
   { id:'banana', name:'Banana Seed', icon:'🍌', plant:'🍌', rarity:'legendary', hidden:true,
     price:23750, fruitValue:0.300, maxGrowth:Infinity, seedSizeBoostRange:[1,1.3], fruitRange:[1,20], extraVariantBonus:1.15, growthDivisor:900, secondSpeedBoost:1.35 },
   { id:'mightybamboo', name:'Mighty Bamboo Seed', icon:'🎋', plant:'🎋', rarity:'mythic', hidden:true,
-    price:575000, fruitValue:2.000, maxGrowth:Infinity, seedSizeBoostRange:[1,25.0], fruitRange:[1,20], extraVariantBonus:2.75, growthDivisor:450, secondSpeedBoost:1.50 },
+    price:5750000, fruitValue:2.000, maxGrowth:Infinity, seedSizeBoostRange:[1,25.0], fruitRange:[1,20], extraVariantBonus:2.75, growthDivisor:450, secondSpeedBoost:1.50 },
   { id:'tangerine', name:'Tangerine Seed', icon:'🍊', plant:'🍊', rarity:'legendary', hidden:true,
     price:22500, fruitValue:0.275, maxGrowth:Infinity, seedSizeBoostRange:[1,1.22], fruitRange:[1,15], extraVariantBonus:1.10, growthDivisor:920, secondSpeedBoost:1.25 },
   { id:'jackolantern', name:'Jacko Lantern Seed', icon:'🎃', plant:'🎃', rarity:'mythic', hidden:true,
-    price:750000, fruitValue:2.500, maxGrowth:Infinity, seedSizeBoostRange:[1,22.0], fruitRange:[1,30], extraVariantBonus:3.00, growthDivisor:425, secondSpeedBoost:1.35 },
+    price:7500000, fruitValue:2.500, maxGrowth:Infinity, seedSizeBoostRange:[1,22.0], fruitRange:[1,30], extraVariantBonus:3.00, growthDivisor:425, secondSpeedBoost:1.35 },
   { id:'alienlike', name:'Alien Like Seed', icon:'🪬', plant:'🪬', rarity:'mythic', hidden:true,
-    price:875000, fruitValue:3.250, maxGrowth:Infinity, seedSizeBoostRange:[1,30.0], fruitRange:[1,15], extraVariantBonus:4.00, growthDivisor:350, secondSpeedBoost:1.75 },
+    price:8750000, fruitValue:3.250, maxGrowth:Infinity, seedSizeBoostRange:[1,30.0], fruitRange:[1,15], extraVariantBonus:4.00, growthDivisor:350, secondSpeedBoost:1.75 },
   { id:'melon', name:'Melon Seed', icon:'🍈', plant:'🍈', rarity:'legendary', hidden:true,
     price:23750, fruitValue:0.440, maxGrowth:Infinity, seedSizeBoostRange:[1,1.28], fruitRange:[1,6], extraVariantBonus:1.15, growthDivisor:900, secondSpeedBoost:1.15 },
   { id:'pineapple', name:'Pineapple Seed', icon:'🍍', plant:'🍍', rarity:'legendary', hidden:true,
@@ -1746,6 +1766,12 @@ function timerColorFor(seconds){
   if(seconds >= 3600)  return '#5fb3ff'; // 1h+: blue
   return null;
 }
+function timerClassFor(seconds){
+  if(seconds >= 2592000) return 'timer-cycle-30d'; // 30 days+: dark orange -> black loop
+  if(seconds >= 864000)  return 'timer-cycle-10d'; // 10 days+: red -> orange -> yellow loop
+  if(seconds >= 432000)  return 'timer-cycle-5d';  // 5 days+: purple -> dark purple -> white loop
+  return null;
+}
 function effectiveGrowthDivisor(seed){
   // legendary/mythic seeds always grow 5x slower than their stored number would suggest --
   // a permanent rule, not baked into the data, so any new legendary/mythic seed added later
@@ -1764,9 +1790,60 @@ function growthTellerFor(seed){
   if(rate >= 1/5000) return { label:'Slow',  color:'#5fb3ff' };
   return { label:'Daily', color:'#3f5fd6' };
 }
-function rollWeightedLow(min, max){
-  var t = Math.pow(Math.random(), 3); // heavily biased toward the low end
-  return Math.round(min + t*(max-min));
+/* ===================== SIZE BONUS CHANCE TABLE ===================== */
+// Out of 50 (same convention as VARIANT_TABLE below): 2=3.5%, 3=1.5%, 4=0.5% are special-cased,
+// then 5 and up follow a self-similar cascade -- 0.2%, then 0.10% down to 0.01% one-hundredth
+// at a time (sizes 6-15), then the same 9-down-to-1 countdown repeats one decimal place smaller
+// each time it bottoms out (16-24 at 0.009%..0.001%, 25-33 at 0.0009%..0.0001%, and so on), so it
+// keeps shrinking forever instead of ever hitting zero. A half-step (X.5) always uses the same
+// chance as the whole number below it. Anything below size 2 (i.e. 1.5) is a flat 5% chance, and
+// size can never roll below 1 (1 = no bonus, and silently absorbs whatever chance is left over).
+function roundTo(x, decimals){
+  var p = Math.pow(10, decimals);
+  return Math.round(x * p) / p;
+}
+function sizeBonusChancePercent(wholeSize){
+  if(wholeSize === 2) return 3.5;
+  if(wholeSize === 3) return 1.5;
+  if(wholeSize === 4) return 0.5;
+  if(wholeSize === 5) return 0.2;
+  if(wholeSize >= 6 && wholeSize <= 15) return roundTo(0.01 * (10 - (wholeSize - 6)), 6);
+  // wholeSize >= 16: the cascade -- 9 steps per block, each block one decimal place smaller
+  var m = wholeSize - 16;
+  var block = Math.floor(m / 9);
+  var pos = m % 9;
+  var scale = 0.001 * Math.pow(10, -block);
+  return roundTo(scale * (9 - pos), 14);
+}
+function sizeBonusChanceFor(size){
+  if(size < 2) return 5; // flat chance for anything below 2 (e.g. 1.5)
+  var whole = Math.floor(size); // a half-step (X.5) uses the same chance as X
+  return sizeBonusChancePercent(whole);
+}
+var sizeBonusTableCache = {};
+function sizeBonusTableFor(maxSize){
+  var effMax = Math.floor(maxSize * 2) / 2; // only whole numbers and halves are ever rollable
+  var key = String(effMax);
+  if(sizeBonusTableCache[key]) return sizeBonusTableCache[key];
+  var table = [];
+  for(var s = 1.5; s <= effMax + 1e-9; s += 0.5){
+    var size = Math.round(s * 2) / 2; // kill float drift (1.5, 2, 2.5, 3, ...)
+    table.push({ size: size, weight: sizeBonusChanceFor(size) / 2 }); // weight out of 50 = percent/2
+  }
+  sizeBonusTableCache[key] = table;
+  return table;
+}
+function rollSizeBonus(seed){
+  var range = seed.seedSizeBoostRange;
+  if(!range) return 1;
+  var table = sizeBonusTableFor(range[1]);
+  var roll = Math.random() * 50;
+  var acc = 0;
+  for(var i=0;i<table.length;i++){
+    acc += table[i].weight;
+    if(roll < acc) return table[i].size;
+  }
+  return 1; // whatever chance is left over -- no bonus
 }
 /* ===================== VARIANTS ===================== */
 // Rolled once, permanently, the instant a seed is planted. Out of 50: 5=silver, 3.5=gold, 2.5=diamond, 1.5=rainbow, rest=none.
@@ -1896,15 +1973,17 @@ function buildPlantTile(plant, opts){
   el.className = 'tile ' + (plant.phase==='seed' ? 'seed' : 'tree') + (opts.extraClass ? (' '+opts.extraClass) : '') + (deleteSelection[plant.uid] ? ' markedForDelete' : '') + (equippedPlant === plant ? ' equipped' : '');
 
   var iconHtml, badgeHtml, actionHtml = '';
-  var timerColor = timerColorFor(plant.growSeconds);
+  var timerClass = timerClassFor(plant.growSeconds);
+  var timerColor = timerClass ? null : timerColorFor(plant.growSeconds); // day-based cycling class wins over the static hour-based color
   var timerStyle = timerColor ? ' style="color:'+timerColor+';"' : '';
+  var timerClassAttr = timerClass ? (' ' + timerClass) : '';
   var sizeBoost = plant.sizeBoost || 1;
   if(plant.phase === 'seed'){
     var spx = iconPx(mult * sizeBoost, seed.maxGrowth, 22, 46);
     var vHiCls = plant.variant ? (' vhi-'+plant.variant) : '';
     iconHtml = '<span class="plant" style="font-size:'+spx+'px;'+seedColorFilterStyle(seed)+'">🌱</span>';
     badgeHtml = '<div class="seedLabel'+vHiCls+'" style="color:var(--rarity-'+seed.rarity+');'+seedNameColorStyle(seed)+'">'+seedDisplayName(seed)+'</div>' +
-                '<div class="timer"'+timerStyle+'>⏳ '+fmtDuration(plant.growSeconds)+'</div>' +
+                '<div class="timer'+timerClassAttr+'"'+timerStyle+'>⏳ '+fmtDuration(plant.growSeconds)+'</div>' +
                 '<div class="fruitcount">Size '+sizeBoostHtml(mult, sizeBoost)+'</div>';
     if(plant.revealed){ actionHtml = '<button class="actionBtn growBtn">GROW</button>'; }
   } else {
@@ -1916,7 +1995,7 @@ function buildPlantTile(plant, opts){
     var tagFontPx = Math.max(4, 6 - (tagCount - 1));
     iconHtml = '<span class="plant" style="font-size:'+tpx+'px;'+seedColorFilterStyle(seed)+'">'+seed.plant+'</span>' +
                '<span class="fruitOverlay'+vCls+'">x'+fruitCount+'</span>';
-    badgeHtml = '<div class="timer"'+timerStyle+'>⏳ '+fmtDuration(plant.growSeconds)+'</div>' +
+    badgeHtml = '<div class="timer'+timerClassAttr+'"'+timerStyle+'>⏳ '+fmtDuration(plant.growSeconds)+'</div>' +
                 (tagsHtml ? '<div class="mutationTagRow" style="font-size:'+tagFontPx+'px;">'+tagsHtml+'</div>' : '') +
                 '<div class="fruitcount two-line"><span>Tree '+sizeBoostHtml(plant.lockedTreeSize, sizeBoost)+'</span><span>Fruit '+fmtSize(mult)+'</span></div>';
     if(opts.location === 'collection'){
@@ -2108,9 +2187,7 @@ function plantSelected(plot){
   var plantedSeed = seedById(selectedSeedId);
   var isNerfed = selectedSeedId === 'wheat' && state.nerfedWheatSeeds > 0;
   if(isNerfed) state.nerfedWheatSeeds -= 1;
-  var sizeBoost = isNerfed ? 1 : (plantedSeed.seedSizeBoostRange
-    ? rollWeightedLow(plantedSeed.seedSizeBoostRange[0], plantedSeed.seedSizeBoostRange[1])
-    : 1);
+  var sizeBoost = isNerfed ? 1 : rollSizeBonus(plantedSeed);
   var variant = isNerfed ? null : rollVariant();
   var newPlant = { uid: nextUid(), seedId: selectedSeedId, phase:'seed', growSeconds:1, lockedTreeSize:null, sizeBoost:sizeBoost, variant:variant, revealed:false };
   if(isNerfed) newPlant.nerfed = true;

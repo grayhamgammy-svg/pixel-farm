@@ -111,6 +111,18 @@
   }
   #dropZone.dragOver{ background:var(--lime-light); border-color:var(--lime-dark); }
   #sessionPausedOverlay:not([hidden]){ display:flex; }
+  #liveTranscriptPanel{
+    position:fixed; top:50%; right:16px; transform:translateY(-50%);
+    width:220px; max-height:70vh; overflow-y:auto;
+    background:linear-gradient(160deg, var(--panel-top), var(--panel-bottom));
+    border:3px solid var(--panel-edge); border-radius:12px;
+    padding:14px; box-shadow:0 6px 0 rgba(0,0,0,.35); z-index:40;
+  }
+  #liveTranscriptLabel{ font-size:12px; font-weight:800; color:var(--lime); margin-bottom:8px; }
+  #liveTranscriptText{ font-size:14px; line-height:1.4; min-height:40px; opacity:.95; overflow-wrap:break-word; }
+  @media (max-width:900px){
+    #liveTranscriptPanel{ position:static; width:auto; transform:none; margin:0 0 18px; max-height:none; }
+  }
   #toast{
     position:fixed; top:16px; left:50%; transform:translate(-50%,-14px);
     font-size:13px; font-weight:700;
@@ -131,6 +143,11 @@
 <div id="topbar">
   <h1>🔊 SOUND PLAY LISTENER</h1>
   <a id="backLink" href="../index.html">← Back to Apps</a>
+</div>
+
+<div id="liveTranscriptPanel" hidden>
+  <div id="liveTranscriptLabel">🎤 Hearing...</div>
+  <div id="liveTranscriptText"></div>
 </div>
 
 <div id="main">
@@ -324,6 +341,20 @@ function renderWordList(){
 }
 
 var lastSoundNameTap = { id: null, t: 0 };
+var playBtnHoldStart = {}; // soundId -> timestamp the Play button was pressed down
+var suppressNextClick = {}; // soundId -> true while a hold-triggered rapid-fire should eat the trailing click
+/* Hold Play for 5+ seconds and let go: the sound rapid-fires for 1 second, plus 1 more second
+   for every second held past the 5s mark (hold 10s -> fires for 5s). Browsers clamp how fast a
+   setInterval can actually tick (rarely true 1ms), so this asks for 1ms and fires as fast as the
+   browser allows for the real-world duration, rather than literally guaranteeing 1000 plays/sec. */
+function rapidFirePlay(sound, durationSeconds){
+  toast('Rapid-fire for ' + durationSeconds + 's!');
+  var endAt = Date.now() + durationSeconds * 1000;
+  var iv = setInterval(function(){
+    if(Date.now() >= endAt){ clearInterval(iv); return; }
+    playSound(sound);
+  }, 1);
+}
 function renderSoundList(){
   var el = document.getElementById('soundList');
   if(!config.sounds.length){
@@ -352,7 +383,24 @@ function renderSoundList(){
         lastSoundNameTap = { id: s.id, t: now };
       }
     });
-    playBtn.addEventListener('click', function(){ playSound(s); });
+    playBtn.addEventListener('pointerdown', function(){ playBtnHoldStart[s.id] = Date.now(); });
+    ['pointerup','pointercancel','pointerleave'].forEach(function(evt){
+      playBtn.addEventListener(evt, function(){
+        var start = playBtnHoldStart[s.id];
+        if(!start) return;
+        delete playBtnHoldStart[s.id];
+        var heldSeconds = Math.round((Date.now() - start) / 1000);
+        if(heldSeconds >= 5){
+          var duration = Math.max(1, heldSeconds - 5);
+          rapidFirePlay(s, duration);
+          suppressNextClick[s.id] = true; // the 'click' that follows shouldn't ALSO fire a normal single play
+        }
+      });
+    });
+    playBtn.addEventListener('click', function(){
+      if(suppressNextClick[s.id]){ delete suppressNextClick[s.id]; return; }
+      playSound(s);
+    });
     delBtn.addEventListener('click', function(){ deleteSound(s); });
     el.appendChild(row);
   });
@@ -882,6 +930,14 @@ var SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecog
 var carryTokens = []; // small trailing buffer so a phrase split across two recognition results still matches
 var instantTriggerEnabled = false;
 var interimScanned = {}; // resultIndex -> how many leading tokens Instant Trigger has already fired on
+var lastHeardAt = 0;
+var silenceWatchdog = null;
+var SILENCE_RELOAD_MS = 5000;
+
+function updateLiveTranscript(text){
+  var el = document.getElementById('liveTranscriptText');
+  if(el) el.textContent = text;
+}
 
 function normalizeHeard(w){ return (w||'').toLowerCase().replace(/[^a-z0-9' ]/g, '').trim(); }
 function normalizeStoredWord(w){ return (w||'').replace(/[^a-zA-Z0-9' ]/g, '').trim(); }
@@ -989,11 +1045,14 @@ function startRecognition(){
   interimScanned = {};
   recognition = new SpeechRecognitionCtor();
   recognition.continuous = true;
-  recognition.interimResults = instantTriggerEnabled;
+  recognition.interimResults = true; // always on so the live transcript panel updates in real time; Instant Trigger only controls whether interim results also fire sounds
   recognition.lang = 'en-US';
   recognition.onresult = function(e){
+    lastHeardAt = Date.now();
+    var liveText = '';
     for(var i = e.resultIndex; i < e.results.length; i++){
       var result = e.results[i];
+      liveText += result[0].transcript + ' ';
       if(result.isFinal){
         var already = interimScanned[i] || 0;
         delete interimScanned[i];
@@ -1007,6 +1066,7 @@ function startRecognition(){
         }
       }
     }
+    updateLiveTranscript(liveText.trim());
   };
   recognition.onerror = function(e){
     if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){
@@ -1026,9 +1086,21 @@ function startRecognition(){
   try{
     recognition.start();
     listening = true;
+    lastHeardAt = Date.now();
     document.getElementById('micStatus').textContent = 'Listening...';
   }catch(e){
     document.getElementById('micStatus').textContent = 'Could not start the microphone.';
+  }
+  if(!silenceWatchdog){
+    silenceWatchdog = setInterval(function(){
+      if(!userWantsListening || !recognition) return;
+      if(Date.now() - lastHeardAt >= SILENCE_RELOAD_MS){
+        lastHeardAt = Date.now(); // reset the clock so a dead mic doesn't reload every tick
+        updateLiveTranscript('');
+        try{ recognition.onend = null; recognition.stop(); }catch(e){}
+        startRecognition(); // silent restart -- no appear sound, this isn't a user activation
+      }
+    }, 1000);
   }
 }
 function stopRecognition(){
@@ -1036,13 +1108,16 @@ function stopRecognition(){
   if(recognition){
     try{ recognition.onend = null; recognition.stop(); }catch(e){}
   }
+  if(silenceWatchdog){ clearInterval(silenceWatchdog); silenceWatchdog = null; }
   listening = false;
   document.getElementById('micStatus').textContent = '';
+  updateLiveTranscript('');
 }
 function setActivateVisual(on){
   var btn = document.getElementById('activateBtn');
   btn.classList.toggle('on', on);
   btn.textContent = on ? 'ACTIVATED' : 'ACTIVATE';
+  document.getElementById('liveTranscriptPanel').hidden = !on;
 }
 document.getElementById('activateBtn').addEventListener('click', function(){
   if(!userWantsListening){
