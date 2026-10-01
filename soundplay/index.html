@@ -110,6 +110,7 @@
     font-size:13px; font-weight:700; line-height:1.2; padding:4px 8px; cursor:default;
   }
   #dropZone.dragOver{ background:var(--lime-light); border-color:var(--lime-dark); }
+  #sessionPausedOverlay:not([hidden]){ display:flex; }
   #toast{
     position:fixed; top:16px; left:50%; transform:translate(-50%,-14px);
     font-size:13px; font-weight:700;
@@ -173,6 +174,18 @@
 </div>
 
 <div id="toast"></div>
+
+<div id="sessionPausedOverlay" hidden style="position:fixed; inset:0; z-index:200; align-items:center; justify-content:center; background:rgba(2,6,16,.78); padding:16px;">
+  <div class="card" style="max-width:380px; text-align:center; margin-bottom:0;">
+    <h2 style="color:#fff; margin:0 0 10px;">PAUSED</h2>
+    <div style="margin-bottom:10px;">Someone is using the same account</div>
+    <div class="hint" style="margin-bottom:16px;">Sound Play Listener is paused until you reconnect.</div>
+    <div style="display:flex; gap:10px; justify-content:center;">
+      <button class="smallBtn" id="sessionLogoutBtn" style="background:linear-gradient(160deg,#f0685a,var(--danger)); border-color:var(--danger-dark); color:#fff;">LOGOUT</button>
+      <button class="smallBtn limeBtn" id="sessionReconnectBtn">RECONNECT</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -300,6 +313,7 @@ function renderWordList(){
   });
 }
 
+var lastSoundNameTap = { id: null, t: 0 };
 function renderSoundList(){
   var el = document.getElementById('soundList');
   if(!config.sounds.length){
@@ -313,14 +327,51 @@ function renderSoundList(){
     row.setAttribute('data-id', s.id);
     row.innerHTML =
       '<span class="dragHandle" title="Drag to reorder">☰</span>' +
-      '<span class="soundName">'+escapeHtml(s.name)+'</span>' +
+      '<span class="soundName" title="Double-tap to rename">'+escapeHtml(s.name)+'</span>' +
       '<button class="iconBtn" title="Preview">▶️</button>' +
       '<button class="iconBtn danger" title="Delete">✕</button>';
+    var nameSpan = row.querySelector('.soundName');
     var playBtn = row.querySelectorAll('button')[0];
     var delBtn = row.querySelectorAll('button')[1];
+    nameSpan.addEventListener('click', function(){
+      var now = Date.now();
+      if(lastSoundNameTap.id === s.id && (now - lastSoundNameTap.t) < 400){
+        lastSoundNameTap.id = null;
+        startRenameSound(s, nameSpan);
+      } else {
+        lastSoundNameTap = { id: s.id, t: now };
+      }
+    });
     playBtn.addEventListener('click', function(){ playSound(s); });
     delBtn.addEventListener('click', function(){ deleteSound(s); });
     el.appendChild(row);
+  });
+}
+function startRenameSound(s, nameSpan){
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.maxLength = 60;
+  input.value = s.name;
+  input.style.cssText = 'flex:1; min-width:0; font-family:Arial, Helvetica, sans-serif; font-size:15px; padding:4px 6px; border-radius:6px; border:none; background:#fffdf5; color:var(--ink);';
+  nameSpan.replaceWith(input);
+  input.focus();
+  input.select();
+  var done = false;
+  function commit(){
+    if(done) return;
+    done = true;
+    var newName = input.value.trim() || s.name;
+    if(newName !== s.name){
+      s.name = newName;
+      soundsRef().doc(s.id).set({ name: newName }, { merge:true }).catch(function(){});
+    }
+    renderSoundList();
+    renderWordList(); // the sound-picker <select> options show these names too
+  }
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ input.blur(); }
+    else if(e.key === 'Escape'){ input.value = s.name; input.blur(); }
   });
 }
 
@@ -419,9 +470,9 @@ document.getElementById('uploadInput').addEventListener('change', function(){
 });
 function uploadSoundFile(file){
   if(!file || !currentUid) return;
-  var okTypes = ['audio/mpeg','audio/mp3','audio/wav','audio/wave','audio/x-wav','audio/ogg'];
-  if(okTypes.indexOf(file.type) < 0 && !/\.(mp3|wav|ogg)$/i.test(file.name)){
-    toast('Please choose an MP3, WAV, or OGG file.');
+  var looksAudio = (file.type && file.type.indexOf('audio') >= 0) || /\.(mp3|wav|ogg|m4a|webm|aac|flac)(\?|#|$)/i.test(file.name);
+  if(!looksAudio){
+    toast('Please choose an audio file.');
     return;
   }
   if(file.size > MAX_SOUND_BYTES){
@@ -471,11 +522,53 @@ function uploadSoundFile(file){
     e.preventDefault();
     e.stopPropagation();
     zone.classList.remove('dragOver');
-    var files = e.dataTransfer && e.dataTransfer.files;
-    if(!files || !files.length) return;
-    for(var i = 0; i < files.length; i++){ uploadSoundFile(files[i]); }
+    var dt = e.dataTransfer;
+    var files = dt && dt.files;
+    if(files && files.length){
+      for(var i = 0; i < files.length; i++){ uploadSoundFile(files[i]); }
+      return;
+    }
+    // Nothing dragged from the local filesystem -- this is probably a sound/link dragged
+    // straight off a web page (an <audio> element, a download link, an image, etc.), which
+    // hands over a URL instead of a File. Try fetching that URL directly.
+    var url = '';
+    if(dt){
+      url = dt.getData('text/uri-list') || dt.getData('URL') || dt.getData('text/plain') || '';
+      url = url.split('\n')[0].trim();
+    }
+    if(/^https?:\/\//i.test(url)){
+      fetchUrlAsSound(url);
+    } else {
+      toast('Could not find an audio file in what you dropped.');
+    }
   });
 })();
+
+function fetchUrlAsSound(url){
+  toast('Fetching...', 10000);
+  fetch(url).then(function(res){
+    if(!res.ok) throw new Error('fetch failed');
+    var ct = (res.headers.get('Content-Type') || '').toLowerCase();
+    return res.blob().then(function(blob){ return { blob: blob, ct: ct }; });
+  }).then(function(result){
+    var blob = result.blob;
+    var ct = result.ct || blob.type || '';
+    var looksAudio = ct.indexOf('audio') >= 0 || /\.(mp3|wav|ogg|m4a|webm)(\?|#|$)/i.test(url);
+    if(!looksAudio){
+      toast('That link is not an audio file.');
+      return;
+    }
+    var name = 'Sound ' + Date.now();
+    try{
+      var last = decodeURIComponent(url.split('/').pop().split('?')[0]);
+      if(last) name = last;
+    }catch(e){}
+    var file = new File([blob], name, { type: ct || blob.type || 'audio/mpeg' });
+    uploadSoundFile(file);
+  }).catch(function(){
+    toast('Could not fetch that sound -- many sites block this kind of cross-site download.');
+  });
+}
 function deleteSound(s){
   config.sounds = config.sounds.filter(function(x){ return x.id !== s.id; });
   config.words.forEach(function(w){ if(w.soundId === s.id) w.soundId = null; });
@@ -727,6 +820,85 @@ if(!SpeechRecognitionCtor){
   document.getElementById('micStatus').textContent = 'Speech recognition is not supported in this browser. Try Chrome or Edge.';
 }
 
+/* ---- single active session per account -- shared with Seed & Wait via the same saves/{uid} doc,
+   so opening either app pauses whichever one was already running elsewhere ---- */
+var mySessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+var sessionUnsub = null;
+var sessionPaused = false;
+var myPasswordChangedAtSeen = 0;
+
+function sessionDocRef(){ return fbDb.collection('saves').doc(currentUid); }
+function claimSession(){
+  if(!currentUid) return;
+  try{
+    sessionDocRef().set({ activeSession: { sessionId: mySessionId, claimedAt: Date.now() } }, { merge:true }).catch(function(){});
+  }catch(e){}
+}
+function watchSession(){
+  if(!currentUid) return;
+  try{
+    sessionUnsub = sessionDocRef().onSnapshot(function(doc){
+      if(!doc.exists) return;
+      var data = doc.data();
+      if(typeof data.passwordChangedAt === 'number'){
+        if(myPasswordChangedAtSeen === 0){
+          myPasswordChangedAtSeen = data.passwordChangedAt;
+        } else if(data.passwordChangedAt > myPasswordChangedAtSeen){
+          myPasswordChangedAtSeen = data.passwordChangedAt;
+          forceLogoutForPasswordChange();
+          return;
+        }
+      }
+      var active = data.activeSession;
+      if(active && active.sessionId && active.sessionId !== mySessionId && !sessionPaused){
+        pauseForOtherSession();
+      }
+    });
+  }catch(e){}
+}
+function pauseForOtherSession(){
+  sessionPaused = true;
+  userWantsListening = false;
+  stopRecognition();
+  document.getElementById('sessionPausedOverlay').hidden = false;
+}
+function resumeAfterReconnect(){
+  claimSession();
+  sessionPaused = false;
+  document.getElementById('sessionPausedOverlay').hidden = true;
+  loadConfig(); // pick up whatever the other session changed while we were paused
+}
+function forceLogoutForPasswordChange(){
+  try{ if(sessionUnsub) sessionUnsub(); }catch(e){}
+  try{ fbAuth.signOut(); }catch(e){}
+  toast('Your password was changed elsewhere -- please log in again.');
+  setTimeout(function(){ window.location.href = '../index.html'; }, 900);
+}
+function logoutAccount(){
+  try{ if(sessionUnsub) sessionUnsub(); }catch(e){}
+  try{ fbAuth.signOut(); }catch(e){}
+  window.location.href = '../index.html';
+}
+document.getElementById('sessionReconnectBtn').addEventListener('click', function(){
+  var btn = this;
+  if(btn.disabled) return;
+  btn.disabled = true;
+  var remaining = 20;
+  btn.textContent = 'RECONNECTING... ' + remaining + 's';
+  var countdown = setInterval(function(){
+    remaining--;
+    if(remaining <= 0){
+      clearInterval(countdown);
+      btn.textContent = 'RECONNECT';
+      btn.disabled = false;
+      resumeAfterReconnect();
+    } else {
+      btn.textContent = 'RECONNECTING... ' + remaining + 's';
+    }
+  }, 1000);
+});
+document.getElementById('sessionLogoutBtn').addEventListener('click', function(){ logoutAccount(); });
+
 /* ---- auth gate: inherits the session from Seed & Wait (same Firebase project, same origin) ---- */
 fbAuth.onAuthStateChanged(function(user){
   if(user){
@@ -734,6 +906,8 @@ fbAuth.onAuthStateChanged(function(user){
     document.getElementById('authGate').hidden = true;
     document.getElementById('appBody').hidden = false;
     loadConfig();
+    claimSession();
+    watchSession();
   } else {
     currentUid = null;
     document.getElementById('authGate').hidden = false;

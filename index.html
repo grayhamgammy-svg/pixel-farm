@@ -736,8 +736,6 @@ if('serviceWorker' in navigator){
         <button class="bigBtn" id="lowerLagToggleBtn" style="width:100%; margin-bottom:18px;">🐢 Lower Lag: OFF</button>
         <div class="gSub" id="harvestAddonSettingRow" hidden style="margin-bottom:8px;">Harvest Addon</div>
         <button class="bigBtn" id="harvestAddonToggleBtn" hidden style="width:100%; margin-bottom:18px;">✅ Partial Harvest: ON</button>
-        <div class="gSub" style="margin-bottom:8px;">Account</div>
-        <button class="bigBtn" id="changePasswordBtn" style="width:100%; margin-bottom:18px;">CHANGE PASSWORD</button>
         <div class="gSub" style="margin-bottom:8px;">Save Data</div>
         <div style="display:flex; gap:10px; justify-content:center; margin-bottom:6px;">
           <button class="bigBtn" id="exportSaveBtn" style="background:var(--green-glow); border-color:#2f8f2f; box-shadow:0 5px 0 #2f8f2f;">EXPORT SAVE</button>
@@ -1099,6 +1097,7 @@ if('serviceWorker' in navigator){
 
 <div id="appPickerScreen" class="authScreen" hidden>
   <div class="authBg" style="background:linear-gradient(160deg, rgba(20,15,10,.55), rgba(10,8,6,.65) 60%, rgba(5,4,3,.75)), url('bg/apppicker.jpg') center/cover no-repeat;"></div>
+  <button class="authBack" id="appPickerSettingsBtn" title="Account settings">⚙️</button>
   <div class="authOverlay" style="max-width:520px;">
     <div class="authTitle" id="appPickerTitle" style="font-size:16px; text-align:center;">Pick an app to play!</div>
     <div class="appGrid">
@@ -1112,6 +1111,13 @@ if('serviceWorker' in navigator){
       </div>
     </div>
     <button class="authBtn authBtnDark" id="appPickerLogoutBtn" style="margin-top:34px;">Log Out</button>
+  </div>
+</div>
+
+<div id="appPickerSettingsOverlay" class="overlay" hidden style="z-index:550;">
+  <div class="panel" style="max-width:420px;">
+    <div class="panel-head"><h2 id="appPickerSettingsTitle">ACCOUNT</h2><button class="closeX" id="appPickerSettingsCloseBtn">X</button></div>
+    <div class="panel-body" style="text-align:center;" id="appPickerSettingsBody"></div>
   </div>
 </div>
 
@@ -2775,20 +2781,24 @@ function openColorFlow(seed){
 }
 
 var settingsPinUnlockedThisSession = false;
+var accountLockPin = null; // lives on the account doc (saves/{uid}.settingsLockPin), not the farm state -- works even before Seed & Wait is ever opened
 var INPUT_STYLE = "width:100%; font-family:'VT323',monospace; font-size:20px; padding:8px; border-radius:6px; border:2px solid var(--panel-edge); background:#fffdf5; color:var(--ink); box-sizing:border-box; margin-bottom:10px;";
 function openChangePasswordFlow(){
   SFX.notify();
-  customizeOverlay.hidden = false;
-  if(state.settingsLockPin && !settingsPinUnlockedThisSession){
-    customizeTitle.textContent = 'ENTER PIN';
-    customizeBody.innerHTML =
+  var overlay = document.getElementById('appPickerSettingsOverlay');
+  var titleEl = document.getElementById('appPickerSettingsTitle');
+  var bodyEl = document.getElementById('appPickerSettingsBody');
+  overlay.hidden = false;
+  if(accountLockPin && !settingsPinUnlockedThisSession){
+    titleEl.textContent = 'ENTER PIN';
+    bodyEl.innerHTML =
       '<div class="gDesc">This setting is locked. Enter the PIN to continue.</div>' +
       '<input type="password" id="cpwPinInput" maxlength="12" style="'+INPUT_STYLE+'">' +
       '<div class="gSub" id="cpwPinError" style="color:var(--danger); min-height:18px;"></div>' +
       '<button class="bigBtn" id="cpwUnlockBtn" style="margin-top:8px; width:100%;">UNLOCK</button>';
     document.getElementById('cpwUnlockBtn').addEventListener('click', function(){
       var typed = document.getElementById('cpwPinInput').value;
-      if(typed && typed === state.settingsLockPin){
+      if(typed && typed === accountLockPin){
         SFX.click();
         settingsPinUnlockedThisSession = true;
         openChangePasswordFlow();
@@ -2798,9 +2808,9 @@ function openChangePasswordFlow(){
       }
     });
   } else {
-    customizeTitle.textContent = 'CHANGE PASSWORD';
-    var lockLabel = state.settingsLockPin ? 'Change or clear the lock PIN' : 'Lock this setting with a PIN (optional)';
-    customizeBody.innerHTML =
+    titleEl.textContent = 'CHANGE PASSWORD';
+    var lockLabel = accountLockPin ? 'Change or clear the lock PIN' : 'Lock this setting with a PIN (optional)';
+    bodyEl.innerHTML =
       '<input type="password" id="cpwCurrent" autocomplete="current-password" placeholder="Current password" style="'+INPUT_STYLE+'">' +
       '<input type="password" id="cpwNew" autocomplete="new-password" placeholder="New password (8+ characters)" style="'+INPUT_STYLE+'">' +
       '<input type="password" id="cpwConfirm" autocomplete="new-password" placeholder="Confirm new password" style="'+INPUT_STYLE+'">' +
@@ -2831,7 +2841,7 @@ function openChangePasswordFlow(){
       }).then(function(){
         SFX.buy();
         toast('Password updated! Any other device using this account will be logged out.');
-        customizeOverlay.hidden = true;
+        overlay.hidden = true;
       }).catch(function(err){
         if(err && (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential')){ errEl.textContent = 'Current password is incorrect.'; }
         else { errEl.textContent = 'Something went wrong. Try again.'; }
@@ -2839,8 +2849,8 @@ function openChangePasswordFlow(){
     });
     document.getElementById('cpwPinSaveBtn').addEventListener('click', function(){
       var newPin = document.getElementById('cpwPinNew').value;
-      state.settingsLockPin = newPin ? newPin : null;
-      persist();
+      accountLockPin = newPin ? newPin : null;
+      try{ fbDb.collection('saves').doc(currentUid).set({ settingsLockPin: accountLockPin }, { merge:true }).catch(function(){}); }catch(e){}
       SFX.change();
       toast(newPin ? 'Lock PIN saved.' : 'Lock PIN removed.');
       settingsPinUnlockedThisSession = true; // already proved account ownership just now
@@ -3904,7 +3914,6 @@ function start(hotData){
   var resetOverlay = document.getElementById('resetOverlay');
   document.getElementById('logoutBtn').addEventListener('click', function(){ SFX.click(); logoutAccount(); });
   document.getElementById('backToAppsBtn').addEventListener('click', function(){ playBackSfx(); exitToAppPicker(); });
-  document.getElementById('changePasswordBtn').addEventListener('click', function(){ SFX.click(); openChangePasswordFlow(); });
   document.getElementById('sessionReconnectBtn').addEventListener('click', function(){
     SFX.click();
     var btn = document.getElementById('sessionReconnectBtn');
@@ -4568,8 +4577,10 @@ function doLogin(){
       var data = doc.data();
       loadedState = JSON.parse(data.state);
       if(typeof loadedState.lastSeen !== 'number') loadedState.lastSeen = data.lastSeen || Date.now();
+      accountLockPin = data.settingsLockPin || null;
     } else {
       loadedState = defaultState();
+      accountLockPin = null;
     }
     beginGameWithState(loadedState);
   }).catch(function(err){
@@ -4616,6 +4627,14 @@ function initAuthUI(){
   document.getElementById('appTileSeedWait').addEventListener('click', function(){ playPickSfx(); enterSeedAndWaitGame(); });
   document.getElementById('appTileSoundPlay').addEventListener('click', function(){ stopLobbyMusic(); playSfxThenGo('sfx-pick.mp3', 'soundplay/index.html'); });
   document.getElementById('appPickerLogoutBtn').addEventListener('click', function(){ logoutAccount(); });
+  document.getElementById('appPickerSettingsBtn').addEventListener('click', function(){ SFX.click(); openChangePasswordFlow(); });
+  document.getElementById('appPickerSettingsCloseBtn').addEventListener('click', function(){
+    SFX.close();
+    document.getElementById('appPickerSettingsOverlay').hidden = true;
+  });
+  document.getElementById('appPickerSettingsOverlay').addEventListener('click', function(e){
+    if(e.target === this){ SFX.close(); this.hidden = true; }
+  });
 
   document.getElementById('authGenderF').addEventListener('click', function(){
     selectedGender = 'female';
@@ -4667,8 +4686,10 @@ try{
             var data = doc.data();
             loadedState = JSON.parse(data.state);
             if(typeof loadedState.lastSeen !== 'number') loadedState.lastSeen = data.lastSeen || Date.now();
+            accountLockPin = data.settingsLockPin || null;
           } else {
             loadedState = defaultState();
+            accountLockPin = null;
           }
           beginGameWithState(loadedState);
         }).catch(function(){
