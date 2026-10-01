@@ -159,7 +159,8 @@
           <button class="smallBtn limeBtn" id="uploadBtn">+ UPLOAD SOUND</button>
           <button class="smallBtn limeBtn" id="recordBtn">🎙 RECORD SOUND</button>
           <div id="dropZone">drag download here</div>
-          <span class="hint" id="uploadHint">MP3, WAV, or OGG — short clips only, under ~700KB. Recordings are capped at 10 seconds.</span>
+          <button class="smallBtn limeBtn" id="aiVoiceBtn">🤖 AI VOICE</button>
+          <span class="hint" id="uploadHint">MP3, WAV, or OGG — short clips only, under ~700KB. Recordings are capped at 10 seconds. AI Voice can say up to 30 characters.</span>
           <span id="recordStatus"></span>
         </div>
       </div>
@@ -252,14 +253,19 @@ function loadConfig(){
     config.sounds = [];
     snap.forEach(function(d){
       var data = d.data();
-      config.sounds.push({
-        id: d.id,
-        name: data.name,
-        mimeType: data.mimeType,
-        dataBase64: data.dataBase64,
-        order: (typeof data.order === 'number') ? data.order : 0,
-        url: 'data:' + data.mimeType + ';base64,' + data.dataBase64
-      });
+      var order = (typeof data.order === 'number') ? data.order : 0;
+      if(data.kind === 'ai'){
+        config.sounds.push({ id: d.id, name: data.name, kind: 'ai', text: data.text, order: order, url: null });
+      } else {
+        config.sounds.push({
+          id: d.id,
+          name: data.name,
+          mimeType: data.mimeType,
+          dataBase64: data.dataBase64,
+          order: order,
+          url: 'data:' + data.mimeType + ';base64,' + data.dataBase64
+        });
+      }
     });
     config.sounds.sort(function(a,b){ return a.order - b.order; });
     renderAll();
@@ -502,6 +508,36 @@ function uploadSoundFile(file){
   reader.readAsDataURL(file);
 }
 
+/* ---- AI voice: speaks the typed text aloud using the browser's own text-to-speech
+   engine (no external service, works offline, nothing to pay for). The sound is stored
+   as text, not audio, so played-back quality depends on the listener's browser/OS. ---- */
+var AI_VOICE_MAX_CHARS = 30;
+var hasSpeechSynthesis = !!window.speechSynthesis;
+if(!hasSpeechSynthesis){ document.getElementById('aiVoiceBtn').disabled = true; }
+document.getElementById('aiVoiceBtn').addEventListener('click', function(){
+  if(!currentUid) return;
+  if(!hasSpeechSynthesis){ toast('AI voice is not supported in this browser.'); return; }
+  var text = window.prompt('What should the AI voice say? (max ' + AI_VOICE_MAX_CHARS + ' characters)', '');
+  if(text === null) return; // cancelled
+  text = text.trim();
+  if(!text){ toast('Please type something for the AI to say.'); return; }
+  if(text.length > AI_VOICE_MAX_CHARS){
+    text = text.slice(0, AI_VOICE_MAX_CHARS);
+    toast('Trimmed to ' + AI_VOICE_MAX_CHARS + ' characters.');
+  }
+  var id = uid8();
+  var order = config.sounds.length;
+  soundsRef().doc(id).set({ name: text, kind: 'ai', text: text, order: order }).then(function(){
+    config.sounds.push({ id:id, name:text, kind:'ai', text:text, order:order, url:null });
+    renderSoundList();
+    renderWordList();
+    playGreenSfx();
+    toast('AI voice added!');
+  }).catch(function(){
+    toast('Could not save the AI voice — check your connection.');
+  });
+});
+
 /* ---- drag a download (or any sound file) straight onto this box to upload it ---- */
 (function(){
   var zone = document.getElementById('dropZone');
@@ -669,7 +705,17 @@ document.getElementById('addWordBtn').addEventListener('click', function(){
 /* ---- playback: every trigger is a fresh, independent Audio instance at a random speed,
    so the same sound can overlap itself many times instead of restarting ---- */
 function playSound(sound){
-  if(!sound || !sound.url) return;
+  if(!sound) return;
+  if(sound.kind === 'ai'){
+    try{
+      if(!window.speechSynthesis) return;
+      var utter = new SpeechSynthesisUtterance(sound.text || '');
+      utter.rate = randomRate();
+      speechSynthesis.speak(utter);
+    }catch(e){}
+    return;
+  }
+  if(!sound.url) return;
   var audio = new Audio(sound.url);
   audio.playbackRate = randomRate();
   audio.play().catch(function(){});
@@ -691,6 +737,18 @@ var carryTokens = []; // small trailing buffer so a phrase split across two reco
 function normalizeHeard(w){ return (w||'').toLowerCase().replace(/[^a-z0-9' ]/g, '').trim(); }
 function normalizeStoredWord(w){ return (w||'').replace(/[^a-zA-Z0-9' ]/g, '').trim(); }
 function isSingleLetter(s){ return s.length === 1 && /[a-zA-Z]/.test(s); }
+
+/* lets a numeral trigger ("1") match the spoken word form ("one") and vice versa */
+var NUMBER_WORDS = {
+  '0':'zero','1':'one','2':'two','3':'three','4':'four','5':'five','6':'six','7':'seven','8':'eight','9':'nine','10':'ten',
+  '11':'eleven','12':'twelve','13':'thirteen','14':'fourteen','15':'fifteen','16':'sixteen','17':'seventeen','18':'eighteen','19':'nineteen','20':'twenty',
+  '30':'thirty','40':'forty','50':'fifty','60':'sixty','70':'seventy','80':'eighty','90':'ninety','100':'hundred'
+};
+function wordsEquivalent(a, b){
+  if(a === b) return true;
+  if(NUMBER_WORDS[a] === b || NUMBER_WORDS[b] === a) return true;
+  return false;
+}
 
 function maxPhraseLen(){
   var max = 1;
@@ -723,7 +781,7 @@ function countMatches(target, tokens){
   for(var i=0; i <= tokens.length - phraseWords.length; i++){
     var match = true;
     for(var j=0;j<phraseWords.length;j++){
-      if(tokens[i+j] !== phraseWords[j]){ match = false; break; }
+      if(!wordsEquivalent(tokens[i+j], phraseWords[j])){ match = false; break; }
     }
     if(match){ n++; i += phraseWords.length - 1; }
   }
