@@ -588,7 +588,9 @@ document.getElementById('photosInput').addEventListener('change', function(){
 });
 function extractAudioFromVideo(file, maxSeconds, onDone, onError){
   var video = document.createElement('video');
-  video.muted = true;
+  // NOT muted -- a muted media element feeds silence into createMediaElementSource on some
+  // browsers, which was why every Photos sound came out empty. Staying silent to the user
+  // is handled below by simply never connecting the source to ctx.destination.
   video.playsInline = true;
   video.src = URL.createObjectURL(file);
   var ctx = null;
@@ -599,6 +601,7 @@ function extractAudioFromVideo(file, maxSeconds, onDone, onError){
   video.addEventListener('loadedmetadata', function(){
     try{
       ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if(ctx.state === 'suspended'){ try{ ctx.resume(); }catch(e){} }
       var source = ctx.createMediaElementSource(video);
       var dest = ctx.createMediaStreamDestination();
       source.connect(dest); // not connected to ctx.destination -- stays silent while we capture it
@@ -802,7 +805,20 @@ document.getElementById('addWordBtn').addEventListener('click', function(){
 });
 
 /* ---- playback: every trigger is a fresh, independent Audio instance at a random speed,
-   so the same sound can overlap itself many times instead of restarting ---- */
+   so the same sound can overlap itself many times instead of restarting. A sound that starts
+   while another is already playing gets boosted louder than the default max volume (needs a
+   GainNode -- a plain <audio>.volume can't go above 1.0) so it cuts through the pile-up. ---- */
+var playbackAudioCtx = null;
+function getPlaybackAudioCtx(){
+  if(!playbackAudioCtx){
+    try{ playbackAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
+  }
+  if(playbackAudioCtx && playbackAudioCtx.state === 'suspended'){ try{ playbackAudioCtx.resume(); }catch(e){} }
+  return playbackAudioCtx;
+}
+var activePlaybackCount = 0;
+var OVERLAP_VOLUME_BOOST = 1.6;
+
 function playSound(sound){
   if(!sound) return;
   if(sound.kind === 'ai'){
@@ -812,7 +828,29 @@ function playSound(sound){
   if(!sound.url) return;
   var audio = new Audio(sound.url);
   audio.playbackRate = randomRate();
-  audio.play().catch(function(){});
+  var overlapping = activePlaybackCount > 0;
+  activePlaybackCount++;
+  var released = false;
+  function release(){
+    if(released) return;
+    released = true;
+    activePlaybackCount = Math.max(0, activePlaybackCount - 1);
+  }
+  audio.addEventListener('ended', release);
+  audio.addEventListener('error', release);
+  if(overlapping){
+    try{
+      var ctx = getPlaybackAudioCtx();
+      if(ctx){
+        var source = ctx.createMediaElementSource(audio);
+        var gainNode = ctx.createGain();
+        gainNode.gain.value = OVERLAP_VOLUME_BOOST;
+        source.connect(gainNode);
+        gainNode.connect(ctx.destination);
+      }
+    }catch(e){} // if this fails for any reason it just plays at the normal volume below
+  }
+  audio.play().catch(function(){ release(); });
 }
 
 /* window.speechSynthesis is a single shared queue -- calling .speak() again while one
@@ -1133,6 +1171,15 @@ document.getElementById('sessionReconnectBtn').addEventListener('click', functio
   }, 1000);
 });
 document.getElementById('sessionLogoutBtn').addEventListener('click', function(){ logoutAccount(); });
+
+/* ---- the drag-drop box is a desktop-only browser feature (phones have no drag-and-drop for
+   files from other apps) -- relabel it on touch devices so it doesn't look broken, and point
+   people at Upload/Photos instead, which both work everywhere ---- */
+if(window.matchMedia && matchMedia('(pointer: coarse)').matches){
+  var dz = document.getElementById('dropZone');
+  dz.textContent = 'drag (desktop only)';
+  dz.style.opacity = '.55';
+}
 
 /* ---- auth gate: inherits the session from Seed & Wait (same Firebase project, same origin) ---- */
 fbAuth.onAuthStateChanged(function(user){
