@@ -160,13 +160,17 @@
           <button class="smallBtn limeBtn" id="recordBtn">🎙 RECORD SOUND</button>
           <div id="dropZone">drag download here</div>
           <button class="smallBtn limeBtn" id="aiVoiceBtn">🤖 AI VOICE</button>
-          <span class="hint" id="uploadHint">MP3, WAV, or OGG — short clips only, under ~700KB. Recordings are capped at 10 seconds. AI Voice can say up to 30 characters.</span>
+          <input type="file" id="photosInput" accept="video/*" hidden>
+          <button class="smallBtn limeBtn" id="photosBtn">📷 PHOTOS</button>
+          <span class="hint" id="uploadHint">MP3, WAV, or OGG — short clips only, under ~700KB. Recordings are capped at 10 seconds. AI Voice can say up to 30 characters. Photos grabs the first 10 seconds of audio from a video.</span>
           <span id="recordStatus"></span>
         </div>
       </div>
     </div>
 
     <div class="card">
+      <button class="smallBtn" id="instantTriggerBtn" style="width:100%; margin-bottom:14px;">⚡ INSTANT TRIGGER: OFF</button>
+      <div class="hint" style="text-align:center; margin:0 0 14px;">When ON, sounds play the instant a word is recognized instead of waiting for you to finish talking. Faster, but can occasionally misfire since the mic is still guessing at that point.</div>
       <button id="activateBtn">ACTIVATE</button>
       <div id="micStatus"></div>
       <div class="hint" style="text-align:center;">When green, the mic is live and listening for your words. Works best in Chrome or Edge.</div>
@@ -538,6 +542,101 @@ document.getElementById('aiVoiceBtn').addEventListener('click', function(){
   });
 });
 
+/* ---- Photos: pick a video from the device's photo library and keep just its audio,
+   trimmed to the same 10-second cap as a recording ---- */
+var PHOTOS_MAX_SECONDS = 10;
+document.getElementById('photosBtn').addEventListener('click', function(){
+  if(!currentUid) return;
+  if(!window.MediaRecorder || !(window.AudioContext || window.webkitAudioContext)){
+    toast('Extracting audio from video is not supported in this browser.');
+    return;
+  }
+  document.getElementById('photosInput').click();
+});
+document.getElementById('photosInput').addEventListener('change', function(){
+  var file = this.files && this.files[0];
+  this.value = '';
+  if(!file || !currentUid) return;
+  toast('Reading audio from video...', 15000);
+  extractAudioFromVideo(file, PHOTOS_MAX_SECONDS, function(blob){
+    if(!blob || !blob.size){ toast('Could not get any audio out of that video.'); return; }
+    if(blob.size > MAX_SOUND_BYTES){ toast('That clip is too big (max ~700KB) — try a shorter or quieter video.'); return; }
+    var reader = new FileReader();
+    reader.onload = function(){
+      var dataUrl = reader.result;
+      var commaIdx = dataUrl.indexOf(',');
+      var mimeType = dataUrl.slice(5, dataUrl.indexOf(';'));
+      var base64 = dataUrl.slice(commaIdx + 1);
+      var name = window.prompt('Name this sound:', file.name.replace(/\.[^.]+$/, ''));
+      if(name === null) return; // cancelled
+      name = name.trim() || ('Video sound ' + Date.now());
+      var id = uid8();
+      var order = config.sounds.length;
+      soundsRef().doc(id).set({ name:name, mimeType:mimeType, dataBase64:base64, order:order }).then(function(){
+        config.sounds.push({ id:id, name:name, mimeType:mimeType, dataBase64:base64, order:order, url:dataUrl });
+        renderSoundList();
+        renderWordList();
+        playGreenSfx();
+        toast('Sound added from video!');
+      }).catch(function(){ toast('Could not save that sound — check your connection.'); });
+    };
+    reader.onerror = function(){ toast('Could not process that video.'); };
+    reader.readAsDataURL(blob);
+  }, function(){
+    toast('Could not read audio from that video.');
+  });
+});
+function extractAudioFromVideo(file, maxSeconds, onDone, onError){
+  var video = document.createElement('video');
+  video.muted = true;
+  video.playsInline = true;
+  video.src = URL.createObjectURL(file);
+  var ctx = null;
+  function cleanup(){
+    try{ if(ctx) ctx.close(); }catch(e){}
+    try{ URL.revokeObjectURL(video.src); }catch(e){}
+  }
+  video.addEventListener('loadedmetadata', function(){
+    try{
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var source = ctx.createMediaElementSource(video);
+      var dest = ctx.createMediaStreamDestination();
+      source.connect(dest); // not connected to ctx.destination -- stays silent while we capture it
+      var mimeType = '';
+      var candidates = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];
+      for(var i=0;i<candidates.length;i++){
+        if(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(candidates[i])){ mimeType = candidates[i]; break; }
+      }
+      var recorder = mimeType ? new MediaRecorder(dest.stream, { mimeType:mimeType }) : new MediaRecorder(dest.stream);
+      var chunks = [];
+      recorder.ondataavailable = function(e){ if(e.data && e.data.size) chunks.push(e.data); };
+      var stopped = false;
+      function stopAll(){
+        if(stopped) return;
+        stopped = true;
+        try{ if(recorder.state === 'recording') recorder.stop(); }catch(e){}
+        try{ video.pause(); }catch(e){}
+      }
+      recorder.onstop = function(){
+        cleanup();
+        onDone(new Blob(chunks, { type: recorder.mimeType || 'audio/webm' }));
+      };
+      video.addEventListener('ended', stopAll);
+      recorder.start();
+      video.play().then(function(){
+        setTimeout(stopAll, maxSeconds * 1000);
+      }).catch(function(err){
+        cleanup();
+        onError(err);
+      });
+    }catch(err){
+      cleanup();
+      onError(err);
+    }
+  });
+  video.addEventListener('error', function(){ cleanup(); onError(new Error('video load failed')); });
+}
+
 /* ---- drag a download (or any sound file) straight onto this box to upload it ---- */
 (function(){
   var zone = document.getElementById('dropZone');
@@ -707,18 +806,51 @@ document.getElementById('addWordBtn').addEventListener('click', function(){
 function playSound(sound){
   if(!sound) return;
   if(sound.kind === 'ai'){
-    try{
-      if(!window.speechSynthesis) return;
-      var utter = new SpeechSynthesisUtterance(sound.text || '');
-      utter.rate = randomRate();
-      speechSynthesis.speak(utter);
-    }catch(e){}
+    speakOverlapping(sound.text || '', randomRate());
     return;
   }
   if(!sound.url) return;
   var audio = new Audio(sound.url);
   audio.playbackRate = randomRate();
   audio.play().catch(function(){});
+}
+
+/* window.speechSynthesis is a single shared queue -- calling .speak() again while one
+   utterance is still going makes the next one WAIT instead of overlapping. Each iframe
+   gets its own independent speechSynthesis queue, so running every AI-voice utterance in
+   its own short-lived hidden iframe lets several play at once, same as regular sounds. */
+function speakOverlapping(text, rate){
+  if(!text) return;
+  try{
+    if(!window.speechSynthesis){ return; }
+    var iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(iframe);
+    var win = iframe.contentWindow;
+    if(!win || !win.speechSynthesis || !win.SpeechSynthesisUtterance){
+      try{ document.body.removeChild(iframe); }catch(e){}
+      // fall back to the main page's queue -- still speaks, just won't overlap others
+      try{
+        var fallback = new SpeechSynthesisUtterance(text);
+        fallback.rate = rate;
+        speechSynthesis.speak(fallback);
+      }catch(e){}
+      return;
+    }
+    var cleaned = false;
+    function cleanup(){
+      if(cleaned) return;
+      cleaned = true;
+      try{ document.body.removeChild(iframe); }catch(e){}
+    }
+    var utter = new win.SpeechSynthesisUtterance(text);
+    utter.rate = rate;
+    utter.onend = cleanup;
+    utter.onerror = cleanup;
+    win.speechSynthesis.speak(utter);
+    setTimeout(cleanup, 15000); // safety net in case the end event never fires
+  }catch(e){}
 }
 function flashWordRow(wordId){
   var row = document.querySelector('#wordList .row[data-id="'+wordId+'"]');
@@ -733,6 +865,8 @@ var listening = false;
 var userWantsListening = false;
 var SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
 var carryTokens = []; // small trailing buffer so a phrase split across two recognition results still matches
+var instantTriggerEnabled = false;
+var interimScanned = {}; // resultIndex -> how many leading tokens Instant Trigger has already fired on
 
 function normalizeHeard(w){ return (w||'').toLowerCase().replace(/[^a-z0-9' ]/g, '').trim(); }
 function normalizeStoredWord(w){ return (w||'').replace(/[^a-zA-Z0-9' ]/g, '').trim(); }
@@ -788,21 +922,43 @@ function countMatches(target, tokens){
   return n;
 }
 
-function handleTranscript(transcript){
+function isPhraseTarget(target){ return !isSingleLetter(target) && target.indexOf(' ') >= 0; }
+
+function fireMatches(w, n){
+  if(n <= 0) return;
+  var sound = config.sounds.filter(function(s){ return s.id === w.soundId; })[0];
+  if(!sound) return;
+  for(var k=0;k<n;k++){ playSound(sound); }
+  flashWordRow(w.id);
+}
+
+/* Instant Trigger mode only: scans just the newly-arrived tail tokens of a still-in-progress
+   recognition result for non-phrase (letter/number/single-word) triggers, so a sound can fire
+   mid-sentence instead of waiting for the person to finish talking. Phrases always wait for the
+   final result since they need every word to have arrived to know they matched. */
+function scanInstantTokens(newTokens){
+  if(!newTokens.length) return;
+  config.words.forEach(function(w){
+    var target = normalizeStoredWord(w.word);
+    if(!target || !w.soundId || isPhraseTarget(target)) return;
+    fireMatches(w, countMatches(target, newTokens));
+  });
+}
+
+/* `alreadyScannedCount` is how many leading tokens Instant Trigger already fired on while this
+   result was still interim -- skipped here so the same utterance doesn't double-fire on final. */
+function handleTranscript(transcript, alreadyScannedCount){
   var heard = normalizeHeard(transcript).split(/\s+/).filter(Boolean);
   if(!heard.length) return;
   var windowTokens = carryTokens.concat(heard);
+  var tailStart = Math.max(0, Math.min(alreadyScannedCount || 0, heard.length));
   config.words.forEach(function(w){
     var target = normalizeStoredWord(w.word);
     if(!target || !w.soundId) return;
-    var isPhrase = !isSingleLetter(target) && target.indexOf(' ') >= 0;
-    var n = countMatches(target, isPhrase ? windowTokens : heard);
-    if(n > 0){
-      var sound = config.sounds.filter(function(s){ return s.id === w.soundId; })[0];
-      if(sound){
-        for(var k=0;k<n;k++){ playSound(sound); }
-        flashWordRow(w.id);
-      }
+    if(isPhraseTarget(target)){
+      fireMatches(w, countMatches(target, windowTokens));
+    } else {
+      fireMatches(w, countMatches(target, heard.slice(tailStart)));
     }
   });
   var keep = Math.max(0, maxPhraseLen() - 1);
@@ -815,14 +971,25 @@ function startRecognition(){
     return;
   }
   carryTokens = [];
+  interimScanned = {};
   recognition = new SpeechRecognitionCtor();
   recognition.continuous = true;
-  recognition.interimResults = false;
+  recognition.interimResults = instantTriggerEnabled;
   recognition.lang = 'en-US';
   recognition.onresult = function(e){
     for(var i = e.resultIndex; i < e.results.length; i++){
-      if(e.results[i].isFinal){
-        handleTranscript(e.results[i][0].transcript);
+      var result = e.results[i];
+      if(result.isFinal){
+        var already = interimScanned[i] || 0;
+        delete interimScanned[i];
+        handleTranscript(result[0].transcript, already);
+      } else if(instantTriggerEnabled){
+        var tokens = normalizeHeard(result[0].transcript).split(/\s+/).filter(Boolean);
+        var seenCount = interimScanned[i] || 0;
+        if(tokens.length > seenCount){
+          scanInstantTokens(tokens.slice(seenCount));
+          interimScanned[i] = tokens.length;
+        }
       }
     }
   };
@@ -871,6 +1038,16 @@ document.getElementById('activateBtn').addEventListener('click', function(){
   } else {
     setActivateVisual(false);
     stopRecognition();
+  }
+});
+document.getElementById('instantTriggerBtn').addEventListener('click', function(){
+  instantTriggerEnabled = !instantTriggerEnabled;
+  this.classList.toggle('limeBtn', instantTriggerEnabled);
+  this.textContent = instantTriggerEnabled ? '⚡ INSTANT TRIGGER: ON' : '⚡ INSTANT TRIGGER: OFF';
+  if(userWantsListening && recognition){
+    // interimResults can only be changed by restarting recognition
+    try{ recognition.onend = null; recognition.stop(); }catch(e){}
+    startRecognition();
   }
 });
 if(!SpeechRecognitionCtor){
