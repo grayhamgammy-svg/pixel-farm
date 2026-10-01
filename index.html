@@ -977,9 +977,17 @@ if('serviceWorker' in navigator){
   .appTileIcon{
     width:84px; height:84px; border-radius:20px;
     border:3px solid var(--panel-edge); box-shadow:0 5px 0 rgba(0,0,0,.4);
-    transition:transform .1s;
+    transition:transform .15s;
   }
+  .appTile:hover .appTileIcon{ transform:scale(1.15); }
   .appTile:active .appTileIcon{ transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,.4); }
+  #appPickerTitle{ animation:appPickerTitleColor 4s linear infinite; }
+  @keyframes appPickerTitleColor{
+    0%{ color:#fff; }
+    33%{ color:#ffd45c; }
+    66%{ color:#4fc3ff; }
+    100%{ color:#fff; }
+  }
   .appTileName{
     font-family:'Press Start 2P', monospace; font-size:9px; color:#fff;
     text-align:center; text-shadow:0 2px 0 #000; line-height:1.4;
@@ -1092,7 +1100,7 @@ if('serviceWorker' in navigator){
 <div id="appPickerScreen" class="authScreen" hidden>
   <div class="authBg" style="background:linear-gradient(160deg, rgba(20,15,10,.55), rgba(10,8,6,.65) 60%, rgba(5,4,3,.75)), url('bg/apppicker.jpg') center/cover no-repeat;"></div>
   <div class="authOverlay" style="max-width:520px;">
-    <div class="authTitle" style="font-size:16px; text-align:center;">Pick an app to play!</div>
+    <div class="authTitle" id="appPickerTitle" style="font-size:16px; text-align:center;">Pick an app to play!</div>
     <div class="appGrid">
       <div class="appTile" id="appTileSeedWait">
         <img class="appTileIcon" src="icon-192.png" alt="Seed &amp; Wait">
@@ -4406,6 +4414,17 @@ var gameStarted = false;
 var SFX_RATES = [0.9, 1, 1.1];
 function randomSfxRate(){ return SFX_RATES[rand(0, SFX_RATES.length - 1)]; }
 function playPickSfx(){ try{ var a = new Audio('sfx-pick.mp3'); a.playbackRate = randomSfxRate(); a.play().catch(function(){}); }catch(e){} }
+function playSfxThenGo(src, dest){
+  var done = false;
+  function go(){ if(done) return; done = true; window.location.href = dest; }
+  try{
+    var a = new Audio(src);
+    a.playbackRate = randomSfxRate();
+    a.addEventListener('ended', go);
+    a.play().catch(function(){ go(); });
+  }catch(e){ go(); }
+  setTimeout(go, 1500); // safety net in case playback never fires 'ended'
+}
 function playBackSfx(){ try{ var a = new Audio('sfx-back.mp3'); a.playbackRate = randomSfxRate(); a.play().catch(function(){}); }catch(e){} }
 function playDeleteSfx(){ try{ var a = new Audio('sfx-delete.mp3'); a.playbackRate = randomSfxRate(); a.play().catch(function(){}); }catch(e){} }
 
@@ -4595,7 +4614,7 @@ function initAuthUI(){
   document.getElementById('authSignupBack').addEventListener('click', function(){ showAuthScreen('authHomeScreen'); });
   document.getElementById('authLoginBack').addEventListener('click', function(){ showAuthScreen('authHomeScreen'); });
   document.getElementById('appTileSeedWait').addEventListener('click', function(){ playPickSfx(); enterSeedAndWaitGame(); });
-  document.getElementById('appTileSoundPlay').addEventListener('click', function(){ playPickSfx(); stopLobbyMusic(); window.location.href = 'soundplay/index.html'; });
+  document.getElementById('appTileSoundPlay').addEventListener('click', function(){ stopLobbyMusic(); playSfxThenGo('sfx-pick.mp3', 'soundplay/index.html'); });
   document.getElementById('appPickerLogoutBtn').addEventListener('click', function(){ logoutAccount(); });
 
   document.getElementById('authGenderF').addEventListener('click', function(){

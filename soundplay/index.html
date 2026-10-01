@@ -103,6 +103,13 @@
   #micStatus{ text-align:center; font-size:15px; margin-top:10px; min-height:20px; }
   #uploadRow{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   #recordStatus{ width:100%; font-size:14px; color:var(--lime-light); }
+  #dropZone{
+    flex:none; width:150px; height:46px; background:#fffdf5; color:var(--ink);
+    border:3px dashed var(--panel-edge); border-radius:8px;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    font-size:13px; font-weight:700; line-height:1.2; padding:4px 8px; cursor:default;
+  }
+  #dropZone.dragOver{ background:var(--lime-light); border-color:var(--lime-dark); }
   #toast{
     position:fixed; top:16px; left:50%; transform:translate(-50%,-14px);
     font-size:13px; font-weight:700;
@@ -150,6 +157,7 @@
           <input type="file" id="uploadInput" accept="audio/mpeg,audio/wav,audio/ogg,audio/*" hidden>
           <button class="smallBtn limeBtn" id="uploadBtn">+ UPLOAD SOUND</button>
           <button class="smallBtn limeBtn" id="recordBtn">🎙 RECORD SOUND</button>
+          <div id="dropZone">drag download here</div>
           <span class="hint" id="uploadHint">MP3, WAV, or OGG — short clips only, under ~700KB. Recordings are capped at 10 seconds.</span>
           <span id="recordStatus"></span>
         </div>
@@ -200,6 +208,21 @@ function randomRate(){ var r = [0.9, 1, 1.1]; return r[Math.floor(Math.random()*
 function playGreenSfx(){ try{ var a = new Audio('../sfx-green.mp3'); a.playbackRate = randomRate(); a.play().catch(function(){}); }catch(e){} }
 function playAppearSfx(){ try{ new Audio('../sfx-appear.mp3').play().catch(function(){}); }catch(e){} }
 function playDeleteSfx(){ try{ var a = new Audio('../sfx-delete.mp3'); a.playbackRate = randomRate(); a.play().catch(function(){}); }catch(e){} }
+function playSfxThenGo(src, dest){
+  var done = false;
+  function go(){ if(done) return; done = true; window.location.href = dest; }
+  try{
+    var a = new Audio(src);
+    a.playbackRate = randomRate();
+    a.addEventListener('ended', go);
+    a.play().catch(function(){ go(); });
+  }catch(e){ go(); }
+  setTimeout(go, 1500); // safety net in case playback never fires 'ended'
+}
+document.getElementById('backLink').addEventListener('click', function(e){
+  e.preventDefault();
+  playSfxThenGo('../sfx-back.mp3', this.getAttribute('href'));
+});
 
 function docRef(){ return fbDb.collection('soundplayConfigs').doc(currentUid); }
 function soundsRef(){ return docRef().collection('sounds'); }
@@ -392,6 +415,9 @@ document.getElementById('uploadBtn').addEventListener('click', function(){
 document.getElementById('uploadInput').addEventListener('change', function(){
   var file = this.files && this.files[0];
   this.value = '';
+  if(file) uploadSoundFile(file);
+});
+function uploadSoundFile(file){
   if(!file || !currentUid) return;
   var okTypes = ['audio/mpeg','audio/mp3','audio/wav','audio/wave','audio/x-wav','audio/ogg'];
   if(okTypes.indexOf(file.type) < 0 && !/\.(mp3|wav|ogg)$/i.test(file.name)){
@@ -423,7 +449,33 @@ document.getElementById('uploadInput').addEventListener('change', function(){
   };
   reader.onerror = function(){ toast('Could not read that file.'); };
   reader.readAsDataURL(file);
-});
+}
+
+/* ---- drag a download (or any sound file) straight onto this box to upload it ---- */
+(function(){
+  var zone = document.getElementById('dropZone');
+  ['dragenter','dragover'].forEach(function(evt){
+    zone.addEventListener(evt, function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      zone.classList.add('dragOver');
+    });
+  });
+  ['dragleave','dragend'].forEach(function(evt){
+    zone.addEventListener(evt, function(e){
+      e.preventDefault();
+      zone.classList.remove('dragOver');
+    });
+  });
+  zone.addEventListener('drop', function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    zone.classList.remove('dragOver');
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if(!files || !files.length) return;
+    for(var i = 0; i < files.length; i++){ uploadSoundFile(files[i]); }
+  });
+})();
 function deleteSound(s){
   config.sounds = config.sounds.filter(function(x){ return x.id !== s.id; });
   config.words.forEach(function(w){ if(w.soundId === s.id) w.soundId = null; });
