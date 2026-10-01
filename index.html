@@ -125,6 +125,14 @@ if('serviceWorker' in navigator){
     border-radius:6px; width:28px; height:28px; cursor:pointer;
     box-shadow:0 3px 0 var(--panel-edge);
   }
+  #exitButtonsGroup{ display:flex; flex-direction:column; align-items:center; gap:3px; }
+  #exitButtonsToggle{
+    font-family:'Press Start 2P', monospace; font-size:10px; line-height:1;
+    background:var(--panel); color:var(--wood-text); border:2px solid var(--panel-edge);
+    border-radius:5px; width:20px; height:15px; cursor:pointer; padding:0;
+  }
+  #exitButtonsRow{ display:flex; gap:6px; }
+  #exitButtonsRow.exitButtonsHidden{ display:none; }
   #backToAppsBtn:active{ transform:translateY(2px); box-shadow:none; }
   #abilitySecretBtn{
     position:absolute; left:6px; top:50%; transform:translateY(-50%);
@@ -741,8 +749,13 @@ if('serviceWorker' in navigator){
       <button id="resetBtn" title="Reset game">↺</button>
       <button id="deleteModeBtn" title="Delete plants">🗑</button>
       <button id="settingsBtn" title="Settings">⚙️</button>
-      <button id="logoutBtn" title="Log out">🚪</button>
-      <button id="backToAppsBtn" title="Back to apps">↩️</button>
+      <div id="exitButtonsGroup">
+        <button id="exitButtonsToggle" title="Hide/show back &amp; logout">–</button>
+        <div id="exitButtonsRow">
+          <button id="logoutBtn" title="Log out">🚪</button>
+          <button id="backToAppsBtn" title="Back to apps">↩️</button>
+        </div>
+      </div>
     </div>
     <div id="shopBtn"><span class="cart">🛒</span>SHOP</div>
   </div>
@@ -1587,7 +1600,7 @@ function defaultState(){
     titleShowingMilestone:false,
     colorChangeUnlocked:{}, nameChangeUnlocked:{}, plantColorHue:{}, nameColorHue:{}, customSeedNames:{}, tutorialSeen:false,
     nerfedWheatSeeds:0, settingsLockPin:null,
-    musicMuted:false, lowerLagMode:false,
+    musicMuted:false, lowerLagMode:false, exitButtonsHidden:false,
     abilityShop:{ merge:false, harvestAddon:false }, harvestAddonSettingOn:true,
     weather:{ current:'sunny', endsAt:0, cooldownUntil:0, nextRainAt:Date.now()+RAIN_INTERVAL, rollAt:0,
               wetRollAt:0, frostRollAt:0, thunderRollAt:0 },
@@ -3687,7 +3700,7 @@ function gameDotReaction(){
       if(wasGreen){
         SFX.disappear();
         greenStreak++;
-        bump(greenStreak >= 5 ? 15 : 10); // 1.5x once you've landed 5+ greens in a row
+        bump(greenStreak >= 5 ? 30 : 20); // 20 per green dot, 1.5x once you've landed 5+ greens in a row
       } else {
         SFX.error();
         greenStreak = 0;
@@ -3991,6 +4004,21 @@ function start(hotData){
   var resetOverlay = document.getElementById('resetOverlay');
   document.getElementById('logoutBtn').addEventListener('click', function(){ SFX.click(); logoutAccount(); });
   document.getElementById('backToAppsBtn').addEventListener('click', function(){ playBackSfx(); exitToAppPicker(); });
+  (function(){
+    var toggle = document.getElementById('exitButtonsToggle');
+    var row = document.getElementById('exitButtonsRow');
+    function applyVisual(hidden){
+      row.classList.toggle('exitButtonsHidden', hidden);
+      toggle.textContent = hidden ? '+' : '–';
+    }
+    applyVisual(!!state.exitButtonsHidden);
+    toggle.addEventListener('click', function(){
+      SFX.click();
+      state.exitButtonsHidden = !state.exitButtonsHidden;
+      applyVisual(state.exitButtonsHidden);
+      persist();
+    });
+  })();
   document.getElementById('sessionReconnectBtn').addEventListener('click', function(){
     SFX.click();
     var btn = document.getElementById('sessionReconnectBtn');
