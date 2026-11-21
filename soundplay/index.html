@@ -185,6 +185,22 @@
       </div>
     </div>
 
+    <div class="card" id="anySoundCard">
+      <h2>ANY-SOUND MODE</h2>
+      <button class="smallBtn" id="anySoundBtn" style="width:100%; margin-bottom:10px;">🔉 ANY-SOUND MODE: OFF</button>
+      <div class="hint" style="text-align:center; margin:0 0 12px;">When ON, any noise the mic hears (a clap, a cough, music, a door, a word) plays a random sound from YOUR SOUNDS. No words needed. Works on its own or together with ACTIVATE.</div>
+      <div id="anyMeter" style="position:relative; height:14px; border-radius:7px; background:rgba(0,0,0,.35); border:2px solid rgba(255,255,255,.18); overflow:hidden; margin-bottom:4px;">
+        <div id="anyMeterFill" style="height:100%; width:0%; background:linear-gradient(90deg,#7CFC7C,#ffd45c,#ff5c5c); transition:width .06s linear;"></div>
+        <div id="anyMeterMark" style="position:absolute; top:0; bottom:0; width:3px; background:#fff; box-shadow:0 0 4px #fff; left:50%;"></div>
+      </div>
+      <div class="hint" id="anyMeterLabel" style="text-align:center; margin:0 0 10px;">Turn it on to see the live sound level. The white line is the trigger: sounds that reach past it set it off.</div>
+      <label class="hint" for="anySens" style="display:block; margin:6px 0 2px;">SENSITIVITY — <span id="anySensVal"></span></label>
+      <input type="range" id="anySens" min="0" max="100" step="1" style="width:100%;">
+      <div class="hint" style="display:flex; justify-content:space-between; margin:0 0 8px;"><span>only loud sounds</span><span>even quiet sounds</span></div>
+      <label class="hint" for="anyGap" style="display:block; margin:6px 0 2px;">TIME BETWEEN SOUNDS — <span id="anyGapVal"></span></label>
+      <input type="range" id="anyGap" min="150" max="3000" step="50" style="width:100%;">
+    </div>
+
     <div class="card">
       <button class="smallBtn" id="instantTriggerBtn" style="width:100%; margin-bottom:14px;">⚡ INSTANT TRIGGER: OFF</button>
       <div class="hint" style="text-align:center; margin:0 0 14px;">When ON, sounds play the instant a word is recognized instead of waiting for you to finish talking. Faster, but can occasionally misfire since the mic is still guessing at that point.</div>
@@ -1161,6 +1177,96 @@ if(!SpeechRecognitionCtor){
   document.getElementById('micStatus').textContent = 'Speech recognition is not supported in this browser. Try Chrome or Edge.';
 }
 
+/* ---- Any-Sound mode: the mic level is watched directly (no speech recognition), and every time it
+   jumps above the sensitivity line a random sound from the list plays. The line is a dB threshold the
+   slider moves; a gap timer + "wait for quiet" re-arming stop one long noise from firing over and over,
+   and nothing fires while this app's own sounds are playing so it can't hear itself and loop. ---- */
+var anySoundOn = false, anyStream = null, anyCtx = null, anyAnalyser = null, anyBuf = null, anyTimer = null;
+var anyArmed = true, anyLastFire = 0, anyLastSoundId = null;
+var anyPrefs = { sens: 60, gap: 700 };
+try{ var savedAny = JSON.parse(localStorage.getItem('soundplayAnyPrefs') || 'null'); if(savedAny){ anyPrefs.sens = +savedAny.sens; anyPrefs.gap = +savedAny.gap; } }catch(e){}
+if(!(anyPrefs.sens >= 0 && anyPrefs.sens <= 100)) anyPrefs.sens = 60;
+if(!(anyPrefs.gap >= 150 && anyPrefs.gap <= 3000)) anyPrefs.gap = 700;
+function anyThresholdDb(){ return -15 - (anyPrefs.sens / 100) * 55; } // 0 = only very loud (-15 dB), 100 = nearly everything (-70 dB)
+function dbToPct(db){ return Math.max(0, Math.min(100, (db + 80) / 80 * 100)); }
+function refreshAnyControls(){
+  document.getElementById('anySens').value = anyPrefs.sens;
+  document.getElementById('anyGap').value = anyPrefs.gap;
+  var s = anyPrefs.sens;
+  document.getElementById('anySensVal').textContent = s + '% (' + (s >= 75 ? 'picks up quiet sounds' : s >= 40 ? 'normal' : 'loud sounds only') + ')';
+  document.getElementById('anyGapVal').textContent = (anyPrefs.gap / 1000).toFixed(2) + ' s';
+  document.getElementById('anyMeterMark').style.left = dbToPct(anyThresholdDb()) + '%';
+}
+function saveAnyPrefs(){ try{ localStorage.setItem('soundplayAnyPrefs', JSON.stringify(anyPrefs)); }catch(e){} }
+document.getElementById('anySens').addEventListener('input', function(){ anyPrefs.sens = +this.value; refreshAnyControls(); saveAnyPrefs(); });
+document.getElementById('anyGap').addEventListener('input', function(){ anyPrefs.gap = +this.value; refreshAnyControls(); saveAnyPrefs(); });
+refreshAnyControls();
+
+function playRandomSound(){
+  var list = config.sounds;
+  if(!list.length) return false;
+  var pick = list[Math.floor(Math.random() * list.length)];
+  if(list.length > 1){ var guard = 0; while(pick.id === anyLastSoundId && guard++ < 8) pick = list[Math.floor(Math.random() * list.length)]; }
+  anyLastSoundId = pick.id;
+  playSound(pick);
+  return true;
+}
+function anyTick(){
+  if(!anySoundOn || !anyAnalyser) return;
+  anyAnalyser.getFloatTimeDomainData(anyBuf);
+  var sum = 0;
+  for(var i = 0; i < anyBuf.length; i++) sum += anyBuf[i] * anyBuf[i];
+  var db = 20 * Math.log10(Math.sqrt(sum / anyBuf.length) + 1e-9);
+  document.getElementById('anyMeterFill').style.width = dbToPct(db) + '%';
+  var thr = anyThresholdDb(), now = Date.now();
+  var selfPlaying = activePlaybackCount > 0 || (window.speechSynthesis && speechSynthesis.speaking);
+  if(db < thr - 6 && !selfPlaying) anyArmed = true; // re-arm once things have gone quiet again
+  if(db > thr && anyArmed && !selfPlaying && now - anyLastFire >= anyPrefs.gap){
+    if(playRandomSound()){
+      anyLastFire = now; anyArmed = false;
+      var row = document.getElementById('anyMeter'); row.style.borderColor = '#fff'; setTimeout(function(){ row.style.borderColor = ''; }, 180);
+    } else {
+      anyLastFire = now;
+      toast('Add a sound to YOUR SOUNDS first.');
+    }
+  }
+}
+function startAnySound(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ toast('This browser cannot use the microphone.'); return; }
+  navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false } }).then(function(stream){
+    if(anySoundOn){ stream.getTracks().forEach(function(t){ t.stop(); }); return; }
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    anyCtx = new Ctx(); if(anyCtx.state === 'suspended'){ try{ anyCtx.resume(); }catch(e){} }
+    anyStream = stream;
+    var src = anyCtx.createMediaStreamSource(stream);
+    anyAnalyser = anyCtx.createAnalyser(); anyAnalyser.fftSize = 1024;
+    anyBuf = new Float32Array(anyAnalyser.fftSize);
+    src.connect(anyAnalyser); // analyser only -- never routed to the speakers
+    anySoundOn = true; anyArmed = true; anyLastFire = 0;
+    anyTimer = setInterval(anyTick, 40);
+    setAnyVisual(true);
+    playAppearSfx();
+  }).catch(function(){
+    toast('Microphone permission was denied.');
+    setAnyVisual(false);
+  });
+}
+function stopAnySound(){
+  anySoundOn = false;
+  if(anyTimer){ clearInterval(anyTimer); anyTimer = null; }
+  if(anyStream){ anyStream.getTracks().forEach(function(t){ t.stop(); }); anyStream = null; }
+  if(anyCtx){ try{ anyCtx.close(); }catch(e){} anyCtx = null; }
+  anyAnalyser = null;
+  document.getElementById('anyMeterFill').style.width = '0%';
+  setAnyVisual(false);
+}
+function setAnyVisual(on){
+  var b = document.getElementById('anySoundBtn');
+  b.classList.toggle('limeBtn', on);
+  b.textContent = on ? '🔉 ANY-SOUND MODE: ON' : '🔉 ANY-SOUND MODE: OFF';
+}
+document.getElementById('anySoundBtn').addEventListener('click', function(){ if(anySoundOn) stopAnySound(); else startAnySound(); });
+
 /* ---- single active session per account -- shared with Seed & Wait via the same saves/{uid} doc,
    so opening either app pauses whichever one was already running elsewhere ---- */
 var mySessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -1201,6 +1307,7 @@ function pauseForOtherSession(){
   sessionPaused = true;
   userWantsListening = false;
   stopRecognition();
+  stopAnySound();
   document.getElementById('sessionPausedOverlay').hidden = false;
 }
 function resumeAfterReconnect(){
@@ -1265,7 +1372,7 @@ fbAuth.onAuthStateChanged(function(user){
   }
 });
 
-window.addEventListener('beforeunload', function(){ stopRecognition(); });
+window.addEventListener('beforeunload', function(){ stopRecognition(); stopAnySound(); });
 
 })();
 </script>
