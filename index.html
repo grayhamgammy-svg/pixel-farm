@@ -3927,7 +3927,7 @@ function renderInventory(){
     var el = document.createElement('div');
     el.className = 'invSlot' + (owned<=0?' empty':'') + (selectedSeedId===seed.id?' selected':'');
     el.dataset.seedId = seed.id;
-    el.innerHTML = '<span class="ic" style="'+seedColorFilterStyle(seed)+'">'+seed.icon+'</span><span class="ct" style="color:var(--rarity-'+seed.rarity+');">'+owned+'</span>';
+    el.innerHTML = '<span class="ic" style="'+seedColorFilterStyle(seed)+'">'+seed.icon+'</span><span class="ct" style="color:var(--rarity-'+seed.rarity+');">'+fmtNum(owned)+'</span>';
     el.title = seedDisplayName(seed);
     el.addEventListener('click', function(){
       SFX.click();
@@ -4558,7 +4558,7 @@ function renderHarvestResult(plant, score, label){
       '<div class="gDesc">'+label+'</div>' +
       (tagsHtml ? '<div class="gDesc tagRow" style="font-size:'+tagFontPx+'px;">'+tagsHtml+'</div>' : '') +
       (addonActive ? '<div class="gSub">Collecting '+chosenQty+' of '+stockBefore+' fruit</div>' : '') +
-      '<div class="gStat">'+effectiveScore.toFixed(1)+'&times; buff</div>' +
+      '<div class="gStat">'+fmtNum(effectiveScore, 1)+'&times; buff</div>' +
       '<div class="gStat" style="color:var(--green-glow);">+'+fmtMoney(reward)+'</div>' +
       (earnLuck > 1 ? '<div class="gSub" style="color:var(--gold);">💰 Earnings Luck +'+luckPct('earnings')+'% included</div>' : '') +
       '<button class="bigBtn" id="collectBtn">COLLECT</button>' +
