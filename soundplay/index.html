@@ -924,7 +924,7 @@ function playSound(sound){
       if(ctx){
         var source = ctx.createMediaElementSource(audio);
         var gainNode = ctx.createGain();
-        gainNode.gain.value = OVERLAP_VOLUME_BOOST;
+        gainNode.gain.value = Math.min(4, 1 + 0.6 * activePlaybackCount); // the more already playing, the louder this one, so it cuts through
         source.connect(gainNode);
         gainNode.connect(ctx.destination);
       }
@@ -1220,6 +1220,16 @@ function anyTick(){
   document.getElementById('anyMeterFill').style.width = dbToPct(db) + '%';
   var thr = anyThresholdDb(), now = Date.now();
   var selfPlaying = activePlaybackCount > 0 || (window.speechSynthesis && speechSynthesis.speaking);
+  if(instantTriggerEnabled){
+    // Instant Trigger: every single time the level climbs past the bar a sound plays -- no waiting for the gap
+    // or for earlier sounds to finish, so they pile up and overlap (each extra one plays louder, see playSound)
+    if(db < thr - 2) anyArmed = true;
+    if(db > thr && anyArmed && now - anyLastFire >= 60){
+      if(playRandomSound()){ anyLastFire = now; anyArmed = false; }
+      else { anyLastFire = now; toast('Add a sound to YOUR SOUNDS first.'); }
+    }
+    return;
+  }
   if(db < thr - 6 && !selfPlaying) anyArmed = true; // re-arm once things have gone quiet again
   if(db > thr && anyArmed && !selfPlaying && now - anyLastFire >= anyPrefs.gap){
     if(playRandomSound()){
