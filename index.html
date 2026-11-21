@@ -347,18 +347,86 @@ if('serviceWorker' in navigator){
       linear-gradient(#a9754a, #8a5a36);
     opacity:.9;
   }
+  /* the two grass stripe colours are registered colour properties, so weather / night changes fade instead of snapping */
+  @property --g1{ syntax:'<color>'; inherits:true; initial-value:#6fbf5c; }
+  @property --g2{ syntax:'<color>'; inherits:true; initial-value:#5fa84e; }
+  #scene{ --g1:var(--grass-1); --g2:var(--grass-2); }
   #grassFill{
     position:absolute; left:0; right:0; bottom:0; top:0;
     background:
-      repeating-linear-gradient(90deg, var(--grass-1) 0 24px, var(--grass-2) 24px 48px);
+      radial-gradient(circle at 18% 32%, rgba(255,255,255,.16) 0 2px, transparent 3px) 0 0/67px 53px,
+      radial-gradient(circle at 72% 64%, rgba(0,0,0,.13) 0 2px, transparent 3px) 0 0/47px 71px,
+      radial-gradient(circle at 40% 80%, rgba(255,236,120,.34) 0 2px, transparent 3px) 0 0/131px 97px,
+      radial-gradient(circle at 85% 20%, rgba(255,160,200,.30) 0 2px, transparent 3px) 0 0/151px 113px,
+      repeating-linear-gradient(90deg, var(--g1) 0 24px, var(--g2) 24px 48px);
     z-index:0;
-    transition:background 1s ease;
+    transition:--g1 1.8s ease, --g2 1.8s ease;
   }
-  #scene.wx-rain #grassFill{ background:repeating-linear-gradient(90deg, #1b2a4a 0 24px, #142038 24px 48px); }
-  #scene.wx-frost #grassFill{ background:repeating-linear-gradient(90deg, #bfe8ff 0 24px, #a8d8f0 24px 48px); }
-  #scene.wx-thunder #grassFill{ background:repeating-linear-gradient(90deg, #4a4a4a 0 24px, #3a3a3a 24px 48px); }
-  #scene.wx-night #grassFill{ background:repeating-linear-gradient(90deg, #5b3a8a 0 24px, #4b2e6d 24px 48px); }
-  #scene.wx-bloodmoon #grassFill{ background:repeating-linear-gradient(90deg, #7a1f1f 0 24px, #6d1a1a 24px 48px); }
+  #scene.wx-rain{ --g1:#1b2a4a; --g2:#142038; }
+  #scene.wx-frost{ --g1:#bfe8ff; --g2:#a8d8f0; }
+  #scene.wx-thunder{ --g1:#4a4a4a; --g2:#3a3a3a; }
+  #scene.wx-night{ --g1:#5b3a8a; --g2:#4b2e6d; }
+  #scene.wx-bloodmoon{ --g1:#7a1f1f; --g2:#6d1a1a; }
+
+  /* ---------- garden scenery ---------- */
+  #gardenDecor{ position:absolute; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+  #gardenDecor .gd{ position:absolute; transform:translate(-50%,-100%); line-height:1; filter:drop-shadow(0 3px 1px rgba(0,0,0,.22)); }
+  #gardenDecor .gd.sway{ animation:gdSway 3.6s ease-in-out infinite; transform-origin:50% 100%; }
+  @keyframes gdSway{ 0%,100%{ transform:translate(-50%,-100%) rotate(-3deg);} 50%{ transform:translate(-50%,-100%) rotate(3deg);} }
+  #gardenDecor .gd.tree{ animation:gdTree 6s ease-in-out infinite; transform-origin:50% 100%; }
+  @keyframes gdTree{ 0%,100%{ transform:translate(-50%,-100%) rotate(-1.2deg);} 50%{ transform:translate(-50%,-100%) rotate(1.2deg);} }
+  .gd-pond{
+    position:absolute; width:104px; height:50px; transform:translate(-50%,-50%); border-radius:50%;
+    background:radial-gradient(ellipse at 38% 32%, #9be8ff, #43a2d8 68%, #2b78a8);
+    border:4px solid #6b4a2b; box-shadow:inset 0 4px 9px rgba(255,255,255,.4), 0 4px 0 rgba(0,0,0,.2);
+    overflow:hidden;
+  }
+  .gd-pond::after{ content:''; position:absolute; left:22%; top:34%; width:34px; height:13px; border-radius:50%;
+    border:2px solid rgba(255,255,255,.6); animation:gdRipple 3.4s ease-out infinite; }
+  .gd-pond span{ position:absolute; top:28%; left:10%; font-size:18px; animation:gdDuck 9s ease-in-out infinite; }
+  @keyframes gdRipple{ 0%{ transform:scale(.3); opacity:.9;} 100%{ transform:scale(1.6); opacity:0;} }
+  @keyframes gdDuck{ 0%,100%{ transform:translateX(0) scaleX(1);} 45%{ transform:translateX(48px) scaleX(1);} 50%{ transform:translateX(48px) scaleX(-1);} 95%{ transform:translateX(0) scaleX(-1);} }
+  #gardenDecor .critter{ position:absolute; font-size:15px; opacity:1; transition:opacity 2.5s; }
+  #gardenDecor .butterfly{ animation:gdFlutter1 19s ease-in-out infinite; }
+  #gardenDecor .butterfly.b2{ animation-name:gdFlutter2; animation-duration:24s; }
+  #gardenDecor .butterfly.b3{ animation-name:gdFlutter3; animation-duration:16s; }
+  @keyframes gdFlutter1{ 0%,100%{ transform:translate(0,0) rotate(0);} 20%{ transform:translate(60px,-34px) rotate(14deg);} 45%{ transform:translate(130px,12px) rotate(-10deg);} 70%{ transform:translate(50px,48px) rotate(12deg);} }
+  @keyframes gdFlutter2{ 0%,100%{ transform:translate(0,0);} 25%{ transform:translate(-70px,-26px) rotate(-12deg);} 55%{ transform:translate(-30px,40px) rotate(10deg);} 80%{ transform:translate(-110px,18px) rotate(-8deg);} }
+  @keyframes gdFlutter3{ 0%,100%{ transform:translate(0,0);} 33%{ transform:translate(40px,-52px) rotate(18deg);} 66%{ transform:translate(-36px,-18px) rotate(-14deg);} }
+  #plotFrame{ position:relative; z-index:2; max-width:100%; }
+  #plotFlora{ position:absolute; inset:-6px; pointer-events:none; z-index:3; }
+  #plotFlora .fl{ position:absolute; line-height:1; transform:translate(-50%,-50%); filter:drop-shadow(0 2px 0 rgba(0,0,0,.25)); animation:gdSway 4s ease-in-out infinite; }
+  /* day / night: a tint that fades in and out over a few seconds instead of switching instantly */
+  #dayTint{ position:absolute; inset:0; z-index:12; pointer-events:none; background:rgba(0,0,0,0); transition:background-color 3.6s ease; }
+  #app[data-sky="night"] #dayTint{ background:rgba(16,10,72,.44); }
+  #app[data-sky="blood"] #dayTint{ background:rgba(120,0,12,.36); }
+  #app[data-sky="rain"] #dayTint{ background:rgba(20,40,96,.22); }
+  #app[data-sky="thunder"] #dayTint{ background:rgba(16,16,28,.34); }
+  #app[data-sky="frost"] #dayTint{ background:rgba(190,230,255,.16); }
+  #nightFx{ position:absolute; inset:0; z-index:13; pointer-events:none; overflow:hidden; opacity:0; transition:opacity 3.2s ease; }
+  #app[data-sky="night"] #nightFx, #app[data-sky="blood"] #nightFx{ opacity:1; }
+  #nightFx .firefly{
+    position:absolute; width:5px; height:5px; border-radius:50%; background:#fff6a8;
+    box-shadow:0 0 8px 3px rgba(255,230,100,.85); animation:gdFirefly 11s ease-in-out infinite, gdFlicker 2.4s ease-in-out infinite;
+  }
+  @keyframes gdFirefly{ 0%,100%{ transform:translate(0,0);} 25%{ transform:translate(34px,-22px);} 50%{ transform:translate(-18px,-46px);} 75%{ transform:translate(-40px,-8px);} }
+  @keyframes gdFlicker{ 0%,100%{ opacity:.25;} 50%{ opacity:1;} }
+  #app[data-sky="night"] .butterfly, #app[data-sky="blood"] .butterfly, #app[data-sky="rain"] .butterfly, #app[data-sky="thunder"] .butterfly{ opacity:0 !important; }
+  #app.lowlag .critter, #app.lowlag #nightFx{ display:none; }
+  #app.lowlag #gardenDecor .gd, #app.lowlag #plotFlora .fl{ animation:none; }
+  @media (max-width:480px){ /* phones: let the title + tool buttons wrap so the Shop button stays on screen */
+    #titleGroup{ flex-wrap:wrap; max-width:calc(100vw - 132px); row-gap:5px; }
+    #title{ flex:1 0 100%; font-size:10px; padding:6px 8px; letter-spacing:0; white-space:nowrap; }
+    #shopBtn{ font-size:9px; padding-left:8px; padding-right:8px; }
+    #app #farmControls{ top:calc(104px + env(safe-area-inset-top,0px)); }
+  }
+  /* smooth hover / press feedback on buttons (uses the separate `translate` property so it never fights a button's own transform) */
+  button, .invSlot, #levelPill{ transition:translate .14s ease, filter .14s ease; }
+  button:not(:disabled):hover, .invSlot:hover, #levelPill:hover{ translate:0 -2px; filter:brightness(1.1); }
+  button:not(:disabled):active, .invSlot:active{ translate:0 1px; filter:brightness(.96); }
+  @media (prefers-reduced-motion:reduce){
+    #gardenDecor .gd, #gardenDecor .critter, #plotFlora .fl, #nightFx .firefly, .gd-pond span, .gd-pond::after{ animation:none !important; }
+  }
   #farmControls{
     position:fixed;
     top:calc(76px + env(safe-area-inset-top,0px));
@@ -388,7 +456,6 @@ if('serviceWorker' in navigator){
   }
   #plotWrap{
     position:relative;
-    z-index:2;
     background:linear-gradient(var(--soil-1), var(--soil-2));
     border:8px solid var(--soil-edge);
     border-radius:14px;
@@ -492,10 +559,12 @@ if('serviceWorker' in navigator){
     50%{ color:#000000; }
     100%{ color:#b35900; }
   }
-  .tile .seedLabel{
-    position:absolute; top:-29px; left:50%; transform:translateX(-50%);
-    font-family:'Press Start 2P', monospace; font-size:7px;
-    white-space:nowrap; z-index:2; pointer-events:none;
+  .tile .seedLabel{ /* the seed's name sits centred on top of its picture */
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    font-family:'Press Start 2P', monospace; font-size:7px; line-height:1.35; text-align:center;
+    width:max-content; max-width:104%; white-space:normal;
+    background:rgba(0,0,0,.38); padding:2px 4px; border-radius:5px;
+    z-index:2; pointer-events:none;
     text-shadow:0 1px 0 #000, 0 0 4px rgba(0,0,0,.8);
   }
   .seedLabel.vhi-silver{ text-shadow:0 1px 0 #000, 0 0 4px rgba(0,0,0,.8), 0 0 5px #c9c9c9, 0 0 10px #c9c9c9; }
@@ -571,6 +640,24 @@ if('serviceWorker' in navigator){
   .tile.seed .plant{ animation:sway 2.2s ease-in-out infinite; opacity:.9; }
   .tile.tree .plant{ animation:bounce 1.6s ease-in-out infinite; }
   .tile.tree:hover .plant{ filter:drop-shadow(0 0 10px #fff) brightness(1.25); transform:scale(1.06); }
+  /* rarity-coloured frames on every planted seed / tree */
+  .tile.rar-common{ --rc:var(--rarity-common); }
+  .tile.rar-uncommon{ --rc:var(--rarity-uncommon); }
+  .tile.rar-rare{ --rc:var(--rarity-rare); }
+  .tile.rar-legendary{ --rc:var(--rarity-legendary); }
+  .tile.rar-mythic{ --rc:var(--rarity-mythic); }
+  .tile[class*="rar-"]{ border-style:solid; border-width:3px; border-color:var(--rc); }
+  .tile[class*="rar-"]:not(.equipped):not(.markedForDelete):not(.grow-flash):not(.harvest-flash){ box-shadow:0 0 7px var(--rc), inset 0 0 10px rgba(0,0,0,.18); }
+  .tile.rar-rare .plant, .tile.rar-legendary .plant, .tile.rar-mythic .plant{ filter:drop-shadow(0 0 5px var(--rc)) drop-shadow(0 3px 2px rgba(0,0,0,.25)); }
+  .tile.rar-legendary:not(.equipped):not(.markedForDelete):not(.grow-flash):not(.harvest-flash){ animation:rarPulse 2.6s ease-in-out infinite; }
+  .tile.rar-mythic:not(.equipped):not(.markedForDelete):not(.grow-flash):not(.harvest-flash){ animation:rarMythic 3.2s linear infinite; }
+  @keyframes rarPulse{ 0%,100%{ box-shadow:0 0 6px var(--rc), inset 0 0 10px rgba(0,0,0,.18);} 50%{ box-shadow:0 0 15px var(--rc), inset 0 0 10px rgba(0,0,0,.18);} }
+  @keyframes rarMythic{ 0%{ border-color:#ff5cf0; box-shadow:0 0 9px #ff5cf0;} 33%{ border-color:#5cf0ff; box-shadow:0 0 12px #5cf0ff;} 66%{ border-color:#ffe45c; box-shadow:0 0 9px #ffe45c;} 100%{ border-color:#ff5cf0; box-shadow:0 0 9px #ff5cf0;} }
+  .tile.seed[draggable="true"], .tile.tree[draggable="true"]{ cursor:grab; }
+  .tile.placed{ animation:tilePlaced .5s cubic-bezier(.2,.9,.3,1.3); }
+  @keyframes tilePlaced{ 0%{ transform:scale(.86); } 55%{ transform:scale(1.07); } 100%{ transform:scale(1); } }
+  .tile.stage-up .plant{ animation:stageUp .7s cubic-bezier(.2,.9,.3,1.4); }
+  @keyframes stageUp{ 0%{ transform:scale(.7); filter:brightness(2.2) drop-shadow(0 0 10px #9dff9d); } 60%{ transform:scale(1.25); } 100%{ transform:scale(1); } }
   .tile.grow-flash{ box-shadow:0 0 0 4px var(--gold) inset; }
   .tile.harvest-flash{ box-shadow:0 0 0 4px var(--green-glow) inset; }
   @keyframes sway{ 0%,100%{ transform:rotate(-4deg);} 50%{ transform:rotate(4deg);} }
@@ -639,11 +726,40 @@ if('serviceWorker' in navigator){
   #collectionBar{
     background:var(--panel-2);
     border-top:3px solid var(--panel-edge);
-    padding:10px 12px;
-    display:flex; align-items:center; gap:10px;
+    padding:8px 12px 0;
+    display:flex; flex-direction:column; gap:0;
   }
-  #colHint{ font-size:15px; color:var(--wood-text); flex:none; opacity:.85; white-space:nowrap; }
-  #colSlots{ display:flex; gap:14px; overflow-x:auto; overflow-y:hidden; flex:1; min-width:0; padding:24px 4px 58px; }
+  #colHead{ display:flex; align-items:center; gap:8px; }
+  #colHint{ font-size:16px; color:var(--wood-text); flex:1; opacity:.95; white-space:nowrap; }
+  #colCount{
+    display:inline-block; min-width:20px; padding:0 6px; margin-left:4px; text-align:center;
+    background:rgba(0,0,0,.35); border-radius:10px; font-size:14px; color:#fff;
+  }
+  #colSortBtn, #colToggle{
+    flex:none; font-family:'VT323', monospace; font-size:15px; cursor:pointer;
+    height:26px; padding:0 9px; border-radius:7px;
+    background:var(--gold); color:var(--ink); border:2px solid var(--gold-dark); box-shadow:0 2px 0 var(--gold-dark);
+    transition:transform .12s, filter .12s;
+  }
+  #colToggle{ width:30px; padding:0; font-size:14px; }
+  #colSortBtn:hover, #colToggle:hover{ filter:brightness(1.1); transform:translateY(-1px); }
+  #colSortBtn:active, #colToggle:active{ transform:translateY(2px); box-shadow:none; }
+  #colToggle span, #colToggle{ transition:transform .25s, filter .12s; }
+  #collectionBar.col-closed #colToggle{ transform:rotate(180deg); }
+  #collectionBar.col-closed #colToggle:hover{ transform:rotate(180deg) translateY(1px); }
+  /* open/close animation: the body slides closed instead of vanishing */
+  #colBody{
+    overflow:hidden; max-height:240px; opacity:1;
+    transition:max-height .32s cubic-bezier(.4,0,.2,1), opacity .22s;
+  }
+  #collectionBar.col-closed #colBody{ max-height:0; opacity:0; pointer-events:none; }
+  #collectionBar.col-closed{ padding-bottom:8px; }
+  #colSlots{
+    display:flex; gap:14px; overflow-x:auto; overflow-y:hidden; min-width:0; padding:24px 4px 58px;
+    scrollbar-width:thin;
+  }
+  .colCard.card-new{ animation:colCardIn .3s ease both; } /* only cards that were just added -- the bar is rebuilt every second */
+  @keyframes colCardIn{ from{ opacity:0; transform:translateY(10px) scale(.92);} to{ opacity:1; transform:none; } }
 
   #invBar{
     background:var(--panel);
@@ -1009,14 +1125,24 @@ if('serviceWorker' in navigator){
 
   <div id="scene">
     <div id="grassFill"></div>
+    <div id="gardenDecor"></div>
     <div id="fenceRow"></div>
-    <div id="plotWrap"><div id="plotGrid"></div><div id="petLayer"></div></div>
+    <div id="plotFrame">
+      <div id="plotWrap"><div id="plotGrid"></div><div id="petLayer"></div></div>
+      <div id="plotFlora"></div>
+    </div>
   </div>
+  <div id="dayTint"></div>
+  <div id="nightFx"></div>
 
   <div id="bottomDock">
     <div id="collectionBar" hidden>
-      <span id="colHint">🎒 My Plants:</span>
-      <div id="colSlots"></div>
+      <div id="colHead">
+        <span id="colHint">🎒 My Plants <span id="colCount">0</span></span>
+        <button id="colSortBtn" title="Sort by rarity (best first)">⇅ Sort</button>
+        <button id="colToggle" title="Hide / show your extra plants">▾</button>
+      </div>
+      <div id="colBody"><div id="colSlots"></div></div>
     </div>
     <div id="invBar">
       <div id="invBarInner">
@@ -2183,6 +2309,45 @@ function updateTitleText(){
 
 var draggingPlant = null;
 var draggingSourcePlot = null; // null = dragging came from the collection bar; else the plot it came from
+var dragSince = 0;
+function dragIsActive(){ return !!draggingPlant && dragSince > 0 && (Date.now() - dragSince) < 8000; } // plots aren't rebuilt mid-drag (a removed drag source never fires dragend); 8s failsafe
+
+// FLIP-style move animation: remember where every plot plant sits, change state, re-render, then slide each
+// plant that moved from its old spot to its new one (plus a small pop on landing).
+function capturePlantRects(){
+  var map = {};
+  var tiles = document.querySelectorAll('#plotGrid [data-uid]');
+  for(var i = 0; i < tiles.length; i++){ map[tiles[i].getAttribute('data-uid')] = tiles[i].getBoundingClientRect(); }
+  return map;
+}
+function playPlantMoves(before){
+  var tiles = document.querySelectorAll('#plotGrid [data-uid]');
+  for(var i = 0; i < tiles.length; i++){
+    (function(el){
+      var from = before[el.getAttribute('data-uid')];
+      if(!from) return;
+      var to = el.getBoundingClientRect();
+      var dx = from.left - to.left, dy = from.top - to.top;
+      if(Math.abs(dx) < 2 && Math.abs(dy) < 2) return;
+      el.style.transition = 'none';
+      el.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(1.06)';
+      el.style.zIndex = 20;
+      void el.offsetWidth; // commit the starting pose
+      el.style.transition = 'transform .42s cubic-bezier(.2,.9,.25,1.15)';
+      el.style.transform = 'translate(0,0) scale(1)';
+      setTimeout(function(){ el.style.transition = ''; el.style.transform = ''; el.style.zIndex = ''; }, 460);
+    })(tiles[i]);
+  }
+}
+function landPlantOn(plot){ // pop + dust where a plant was just set down
+  var tile = null, idx = state.plots.indexOf(plot);
+  if(idx >= 0) tile = document.querySelector('#plotGrid [data-plot-index="' + idx + '"]');
+  if(!tile) return;
+  tile.classList.add('placed');
+  setTimeout(function(){ tile.classList.remove('placed'); }, 520);
+  var r = tile.getBoundingClientRect();
+  fxBurst(r.left + r.width / 2, r.bottom - 10, { count:8, chars:['·','✦','🍃'], colors:['#c8a06a','#ffffff'], spread:40, size:12, rise:14 });
+}
 
 /* ===================== DELETE MODE ===================== */
 var deleteMode = false;
@@ -2279,7 +2444,8 @@ function buildPlantTile(plant, opts){
   var seed = seedById(plant.seedId);
   var mult = sizeMult(seed, plant.growSeconds);
   var el = document.createElement('div');
-  el.className = 'tile ' + (plant.phase==='seed' ? 'seed' : 'tree') + (opts.extraClass ? (' '+opts.extraClass) : '') + (deleteSelection[plant.uid] ? ' markedForDelete' : '') + (equippedPlant === plant ? ' equipped' : '');
+  el.className = 'tile ' + (plant.phase==='seed' ? 'seed' : 'tree') + ' rar-' + (seed.rarity || 'common') + (opts.extraClass ? (' '+opts.extraClass) : '') + (deleteSelection[plant.uid] ? ' markedForDelete' : '') + (equippedPlant === plant ? ' equipped' : '');
+  el.setAttribute('data-uid', plant.uid);
 
   var iconHtml, badgeHtml, actionHtml = '';
   var timerClass = timerClassFor(plant.growSeconds);
@@ -2317,10 +2483,12 @@ function buildPlantTile(plant, opts){
   }
   el.innerHTML = iconHtml + badgeHtml + '<div class="actionRow">'+actionHtml+'</div>';
 
-  if(plant.phase === 'tree' && !deleteMode && (opts.location === 'collection' || opts.location === 'plot')){
+  // trees drag between the collection and plots; growing seeds can also be dragged between plots
+  if(!deleteMode && ((plant.phase === 'tree' && (opts.location === 'collection' || opts.location === 'plot')) || (plant.phase === 'seed' && opts.location === 'plot'))){
     el.draggable = true;
     el.addEventListener('dragstart', function(e){
       draggingPlant = plant;
+      dragSince = Date.now();
       draggingSourcePlot = opts.location === 'plot' ? opts.plotRef : null;
       el.classList.add('dragging');
       try{ e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(plant.uid)); }catch(err){}
@@ -2328,6 +2496,7 @@ function buildPlantTile(plant, opts){
     el.addEventListener('dragend', function(){
       draggingPlant = null;
       draggingSourcePlot = null;
+      dragSince = 0;
       el.classList.remove('dragging');
     });
   }
@@ -2346,6 +2515,7 @@ function buildPlantTile(plant, opts){
       var sourcePlot = draggingSourcePlot;
       var targetPlot = opts.plotRef;
       var displaced = targetPlot.plant;
+      var rectsBefore = capturePlantRects();
       if(sourcePlot){
         sourcePlot.plant = displaced; // swap: displaced tree goes where incoming came from
       } else {
@@ -2354,13 +2524,17 @@ function buildPlantTile(plant, opts){
         if(displaced) state.collection.push(displaced); // displaced tree goes to collection
       }
       targetPlot.plant = incoming;
+      if(displaced && !sourcePlot) displaced.revealed = false;
       if(equippedPlant === incoming) equippedPlant = null;
       draggingPlant = null;
       draggingSourcePlot = null;
+      dragSince = 0;
       SFX.click();
       persist();
       renderAll();
-      toast('Trees swapped!');
+      playPlantMoves(rectsBefore);
+      landPlantOn(targetPlot);
+      toast(sourcePlot ? 'Plants swapped!' : 'Tree planted -- the old plant went to your collection!');
     });
   }
 
@@ -2452,6 +2626,22 @@ function buildPlantTile(plant, opts){
 var plotGridEl;
 var selectedSeedId = null;
 
+// Growth stages: a seed passes through 5 stages on its way to full size, and a little pop + leaf burst marks each one.
+var plantStages = {};
+function checkGrowthStage(plant, el){
+  var seed = seedById(plant.seedId); if(!seed) return;
+  var isTree = plant.phase === 'tree';
+  var ratio = isTree ? 1 : (sizeMult(seed, plant.growSeconds) - 1) / Math.max(0.0001, seed.maxGrowth - 1);
+  var stage = Math.min(4, Math.max(0, Math.floor(ratio * 5)));
+  var prev = plantStages[plant.uid];
+  plantStages[plant.uid] = { stage:stage, tree:isTree };
+  if(!prev || prev.tree !== isTree || stage <= prev.stage || isTree) return;
+  el.classList.add('stage-up');
+  setTimeout(function(){ el.classList.remove('stage-up'); }, 750);
+  var a = fxAnchor(plant);
+  fxBurst(a.x, a.y, { count:7, chars:['🍃','✨','🌿'], colors:['#9dff9d','#ffffff'], spread:34, size:13, rise:16 });
+}
+
 function renderPlots(){
   plotGridEl.style.gridTemplateColumns = 'repeat(' + FARM_COLS + ', minmax(84px,108px))';
   plotGridEl.innerHTML = '';
@@ -2477,6 +2667,8 @@ function renderPlots(){
         e.preventDefault();
         el.classList.remove('drag-hover');
         if(!draggingPlant) return;
+        var rectsBefore = capturePlantRects();
+        var wasSeed = draggingPlant.phase === 'seed';
         if(draggingSourcePlot){
           draggingSourcePlot.plant = null;
         } else {
@@ -2488,10 +2680,13 @@ function renderPlots(){
         if(equippedPlant === draggingPlant) equippedPlant = null;
         draggingPlant = null;
         draggingSourcePlot = null;
+        dragSince = 0;
         SFX.click();
         persist();
         renderAll();
-        toast('Tree placed on the farm!');
+        playPlantMoves(rectsBefore);
+        landPlantOn(plot);
+        toast(wasSeed ? 'Seed moved!' : 'Tree placed on the farm!');
       });
     } else {
       el = buildPlantTile(plot.plant, { onPickUp: function(){ pickUp(plot); }, location:'plot', plotRef: plot });
@@ -2503,6 +2698,7 @@ function renderPlots(){
     el.setAttribute('data-plot-index', plotIdx);
     if(pickingFeedPlotsForPet && pendingFeedPlots.indexOf(plotIdx) >= 0) el.classList.add('feedPlotPicked');
     plotGridEl.appendChild(el);
+    if(plot.plant) checkGrowthStage(plot.plant, el);
   });
   renderPets();
 }
@@ -2602,19 +2798,28 @@ function pressGrow(plant){
 
 /* ===================== COLLECTION PANEL ===================== */
 var collectionBarEl, colSlotsEl;
+var seenColUids = null; // uids already shown in the bar, so only genuinely new cards play the slide-in
 function renderCollection(){
   if(!state.collection.length){ collectionBarEl.hidden = true; return; }
   collectionBarEl.hidden = false;
+  collectionBarEl.classList.toggle('col-closed', !!state.ui.colHidden);
+  var countEl = document.getElementById('colCount'); if(countEl) countEl.textContent = fmtNum(state.collection.length);
+  var sortBtn = document.getElementById('colSortBtn'); if(sortBtn) sortBtn.hidden = !!state.gear.sorter; // the Inventory Sorter gear does it automatically
   if(state.gear.sorter) sortCollectionByRarity(); // Inventory Sorter gear keeps it ordered highest rarity first
+  var firstDraw = seenColUids === null;
+  var nowSeen = {};
   colSlotsEl.innerHTML = '';
   state.collection.forEach(function(plant){
     var el = buildPlantTile(plant, { location:'collection' });
     el.classList.add('colCard');
+    nowSeen[plant.uid] = true;
+    if(!firstDraw && !seenColUids[plant.uid]) el.classList.add('card-new');
     colSlotsEl.appendChild(el);
   });
+  seenColUids = nowSeen;
 }
 
-function renderAll(){ if(!holdIsActive()){ renderPlots(); renderCollection(); } updateLoops(); repositionHud(); updateExpandButton(); renderWeatherBadge(); if(tutorialActive()) renderTutorialSpotlight(); }
+function renderAll(){ if(!holdIsActive() && !dragIsActive()){ renderPlots(); renderCollection(); } updateLoops(); repositionHud(); updateExpandButton(); renderWeatherBadge(); if(tutorialActive()) renderTutorialSpotlight(); }
 function renderWeatherBadge(){
   var iconEl = document.getElementById('weatherIcon');
   if(!iconEl || !state) return;
@@ -2667,11 +2872,81 @@ function applyWeatherVisuals(){
   var scene = document.getElementById('scene');
   if(!scene) return;
   scene.classList.remove('wx-rain','wx-frost','wx-thunder','wx-night','wx-bloodmoon');
-  if(state.night.isNight && state.night.type === 'bloodmoon'){ scene.classList.add('wx-bloodmoon'); }
-  else if(state.night.isNight && state.night.type === 'moonshine'){ scene.classList.add('wx-night'); }
-  else if(state.weather.current === 'rain'){ scene.classList.add('wx-rain'); }
-  else if(state.weather.current === 'frost'){ scene.classList.add('wx-frost'); }
-  else if(state.weather.current === 'thunderstorm'){ scene.classList.add('wx-thunder'); }
+  var sky = 'day';
+  if(state.night.isNight && state.night.type === 'bloodmoon'){ scene.classList.add('wx-bloodmoon'); sky = 'blood'; }
+  else if(state.night.isNight && state.night.type === 'moonshine'){ scene.classList.add('wx-night'); sky = 'night'; }
+  else if(state.weather.current === 'rain'){ scene.classList.add('wx-rain'); sky = 'rain'; }
+  else if(state.weather.current === 'frost'){ scene.classList.add('wx-frost'); sky = 'frost'; }
+  else if(state.weather.current === 'thunderstorm'){ scene.classList.add('wx-thunder'); sky = 'thunder'; }
+  var app = document.getElementById('app');
+  if(app){
+    if(app.getAttribute('data-sky') !== sky) app.setAttribute('data-sky', sky); // the CSS transitions on #dayTint / #nightFx / the grass do the fade
+    app.classList.toggle('lowlag', !!state.lowerLagMode);
+  }
+}
+
+/* ===================== GARDEN SCENERY ===================== */
+function buildGarden(){
+  var decor = document.getElementById('gardenDecor');
+  if(!decor || decor.childElementCount) return;
+  var sv = 11; function rnd(){ sv = (sv * 9301 + 49297) % 233280; return sv / 233280; } // fixed seed: the garden looks the same every visit
+  function put(ch, x, y, size, cls){
+    var d = document.createElement('div');
+    d.className = 'gd' + (cls ? ' ' + cls : '');
+    d.textContent = ch; d.style.left = x + '%'; d.style.top = y + '%'; d.style.fontSize = size + 'px'; d.style.zIndex = Math.round(y);
+    if(cls) d.style.animationDelay = (-rnd() * 5).toFixed(2) + 's';
+    decor.appendChild(d);
+  }
+  // big trees and bushes frame both sides
+  [[4,22,62],[95,20,66],[9,40,52],[91,44,56],[3,60,64],[96,64,58],[14,15,46],[86,13,48]].forEach(function(t){ put(rnd() < .75 ? '🌳' : '🌲', t[0], t[1], t[2], 'tree'); });
+  [[7,50,24],[92,54,26],[15,68,22],[84,70,24],[2,32,22],[98,34,22],[12,26,20],[88,28,22]].forEach(function(b){ put('🌿', b[0], b[1], b[2], 'sway'); });
+  // wildflowers scattered through the side meadows
+  var flowers = ['🌷','🌼','🌸','🌻','🌺','💐','🌼','🌷'];
+  for(var i = 0; i < 34; i++){
+    var left = rnd() < .5;
+    var x = left ? 1 + rnd() * 21 : 78 + rnd() * 21;
+    put(flowers[Math.floor(rnd() * flowers.length)], x, 12 + rnd() * 62, 13 + Math.floor(rnd() * 10), 'sway');
+  }
+  [[6,46],[93,58],[17,60],[81,38]].forEach(function(m){ put('🍄', m[0], m[1], 15); });
+  [[11,56],[89,48],[5,72],[95,26]].forEach(function(m){ put('🪨', m[0], m[1], 20); });
+  [[10,36],[90,32],[18,44],[82,60]].forEach(function(m){ put('🌾', m[0], m[1], 22, 'sway'); });
+  // a pond with a duck
+  var pond = document.createElement('div');
+  pond.className = 'gd-pond'; pond.style.left = '11%'; pond.style.top = '47%'; pond.innerHTML = '<span>🦆</span>';
+  decor.appendChild(pond);
+  // daytime butterflies / bees
+  [['🦋',10,30,''],['🦋',86,26,'b2'],['🐝',16,52,'b3'],['🦋',80,48,''],['🐝',6,40,'b2']].forEach(function(c){
+    var el = document.createElement('div');
+    el.className = 'critter butterfly ' + c[3]; el.textContent = c[0];
+    el.style.left = c[1] + '%'; el.style.top = c[2] + '%'; el.style.animationDelay = (-rnd() * 12).toFixed(1) + 's';
+    decor.appendChild(el);
+  });
+  // flowers and hedges around the plot frame
+  var flora = document.getElementById('plotFlora');
+  if(flora){
+    function fl(ch, left, top, size){
+      var e = document.createElement('div');
+      e.className = 'fl'; e.textContent = ch; e.style.left = left; e.style.top = top; e.style.fontSize = size + 'px';
+      e.style.animationDelay = (-rnd() * 4).toFixed(2) + 's';
+      flora.appendChild(e);
+    }
+    var edge = ['🌷','🌼','🌿','🌸','🌼','🌿','🌷','🌸'];
+    for(var k = 0; k < 8; k++){ fl(edge[k], (6 + k * 12.5) + '%', '0%', 17); fl(edge[(k + 3) % 8], (6 + k * 12.5) + '%', '100%', 17); }
+    for(var j = 1; j < 4; j++){ fl(j % 2 ? '🌼' : '🌷', '0%', (j * 25) + '%', 16); fl(j % 2 ? '🌸' : '🌼', '100%', (j * 25) + '%', 16); }
+    fl('🌳', '-1%', '-2%', 30); fl('🌳', '101%', '-2%', 30); fl('🌿', '-1%', '102%', 26); fl('🌿', '101%', '102%', 26);
+  }
+  // fireflies, visible only at night
+  var nf = document.getElementById('nightFx');
+  if(nf && !nf.childElementCount){
+    for(var f = 0; f < 22; f++){
+      var ff = document.createElement('div');
+      ff.className = 'firefly';
+      ff.style.left = (4 + rnd() * 92) + '%'; ff.style.top = (14 + rnd() * 62) + '%';
+      ff.style.animationDelay = (-rnd() * 11).toFixed(1) + 's, ' + (-rnd() * 2.4).toFixed(1) + 's';
+      ff.style.animationDuration = (8 + rnd() * 7).toFixed(1) + 's, ' + (1.8 + rnd() * 1.8).toFixed(1) + 's';
+      nf.appendChild(ff);
+    }
+  }
 }
 
 /* ---- weather music ---- */
@@ -5054,14 +5329,28 @@ function start(hotData){
   collectionBarEl.addEventListener('drop', function(e){
     e.preventDefault();
     if(!draggingPlant || !draggingSourcePlot) return;
+    var dropped = draggingPlant;
     draggingSourcePlot.plant = null;
-    state.collection.push(draggingPlant);
+    dropped.revealed = false;
+    state.collection.push(dropped);
     draggingPlant = null;
     draggingSourcePlot = null;
     SFX.click();
     persist();
     renderAll();
-    toast('Tree picked up!');
+    toast((dropped.phase === 'seed' ? 'Seed' : 'Tree') + ' picked up!');
+  });
+  document.getElementById('colToggle').addEventListener('click', function(){
+    state.ui.colHidden = !state.ui.colHidden;
+    if(state.ui.colHidden){ SFX.close(); } else { SFX.open(); }
+    collectionBarEl.classList.toggle('col-closed', !!state.ui.colHidden);
+    persist(false);
+  });
+  document.getElementById('colSortBtn').addEventListener('click', function(){
+    SFX.click();
+    sortCollectionByRarity();
+    persist();
+    renderCollection();
   });
   shopOverlay = document.getElementById('shopOverlay');
   shopBody = document.getElementById('shopBody');
@@ -5479,6 +5768,7 @@ function start(hotData){
   var offlineElapsed = computeOfflineElapsed();
 
   spawnClouds();
+  buildGarden();
   renderInventory();
   renderAll(); // shows the garden exactly as it was left, before any offline growth is applied
   tickCurrencyDisplay();
