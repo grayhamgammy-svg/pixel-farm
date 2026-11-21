@@ -238,11 +238,10 @@ if('serviceWorker' in navigator){
   #weatherTipName2{ font-size:11px; color:#ffe066; margin:8px 0 6px; border-top:1px solid rgba(255,255,255,.2); padding-top:8px; }
   #weatherTipDesc2{ font-size:8px; line-height:1.6; color:#fff; }
   #pixelHud .coin{
-    width:26px;height:26px;border-radius:50%;
-    background:radial-gradient(circle at 35% 30%, #fff6cf, var(--gold) 55%, var(--gold-dark) 100%);
-    border:2px solid var(--gold-dark);
+    width:30px;height:30px;
     display:flex;align-items:center;justify-content:center;
-    font-family:'Press Start 2P',monospace;font-size:11px;color:#6b4a10;
+    font-size:22px;line-height:1;
+    filter:drop-shadow(0 2px 0 rgba(0,0,0,.35));
     flex:none;
   }
   #pixelValue{
@@ -806,7 +805,7 @@ if('serviceWorker' in navigator){
       <div id="title">🌾 SEED & WAIT</div>
       <button id="resetBtn" title="Reset game">↺</button>
       <button id="deleteModeBtn" title="Delete plants">🗑</button>
-      <button id="questsBtn" title="Quests">📜</button>
+      <button id="questsBtn" title="Quests" hidden>📜</button>
       <button id="settingsBtn" title="Settings">⚙️</button>
       <div id="exitButtonsGroup">
         <button id="exitButtonsToggle" title="Hide/show back &amp; logout">–</button>
@@ -936,7 +935,7 @@ if('serviceWorker' in navigator){
   </div>
 
   <div id="pixelHud">
-    <div class="coin">₥</div>
+    <div class="coin">💵</div>
     <div id="pixelValue">0.000</div>
   </div>
 
@@ -1557,7 +1556,7 @@ var TYPING_SNIPPETS = [
 var GUIDED_STEPS = [
   { text:'Welcome to Seed & Wait! Let\'s walk through the basics together. Tap SHOP to open the seed shop.',
     getTarget:function(){ return document.getElementById('shopBtn'); }, waitFor:'shopOpened' },
-  { text:'You start with 5₥ — just enough for a Wheat Seed. Buy it!',
+  { text:'You start with 💵5 — just enough for a Wheat Seed. Buy it!',
     getTarget:function(){ return document.querySelector('#shopBody .shopRow[data-seed-id="wheat"] .buyBtn'); }, waitFor:'seedBought' },
   { text:'Nice! Now close the shop.',
     getTarget:function(){ return document.getElementById('shopClose'); }, waitFor:'shopClosed' },
@@ -1833,6 +1832,13 @@ function runOfflineCutscene(elapsedSeconds){
 }
 
 /* ===================== HELPERS ===================== */
+var MONEY_ICON = '💵'; // replaces the old mill symbol everywhere sub-cent amounts show
+// number with thousands separators: fmtNum(100000) -> "100,000", fmtNum(1234.5, 1) -> "1,234.5"
+function fmtNum(n, decimals){
+  if(!isFinite(n)) n = 0;
+  var d = decimals || 0;
+  return n.toLocaleString('en-US', { minimumFractionDigits:d, maximumFractionDigits:d });
+}
 function fmtPixels(n){
   if(!isFinite(n)) n = 0;
   var abs = Math.abs(n);
@@ -1843,12 +1849,12 @@ function fmtPixels(n){
 }
 function fmtDollars(pixels){
   var dollars = pixels / DOLLAR;
-  return '$' + (dollars % 1 === 0 ? dollars.toFixed(0) : dollars.toFixed(2));
+  return '$' + (dollars % 1 === 0 ? fmtNum(dollars, 0) : fmtNum(dollars, 2));
 }
 function fmtMoney(pixels){
   var abs = Math.abs(pixels);
   if(abs < CENT){
-    return (abs < 1 ? pixels.toFixed(3) : pixels.toFixed(2)) + '₥';
+    return MONEY_ICON + (abs < 1 ? pixels.toFixed(3) : pixels.toFixed(2));
   }
   if(abs < DOLLAR){
     var cents = pixels / CENT;
@@ -1864,10 +1870,10 @@ function fmtDuration(sec){
   var h = Math.floor(m/60); m = m%60;
   return h + ':' + (m<10?'0':'') + m + ':' + (s<10?'0':'') + s;
 }
-function fmtSize(m){ return m.toFixed(1) + '×'; }
-function fmtSizeBoost(m, boost){ return m.toFixed(1) + '×' + (boost > 1 ? ('(' + boost + ')') : ''); }
+function fmtSize(m){ return fmtNum(m, 1) + '×'; }
+function fmtSizeBoost(m, boost){ return fmtNum(m, 1) + '×' + (boost > 1 ? ('(' + fmtNum(boost, boost % 1 ? 1 : 0) + ')') : ''); }
 function sizeBoostHtml(m, boost){
-  return fmtSize(m) + (boost > 1 ? ('<span class="boostTag">('+boost+')</span>') : '');
+  return fmtSize(m) + (boost > 1 ? ('<span class="boostTag">('+fmtNum(boost, boost % 1 ? 1 : 0)+')</span>') : '');
 }
 function timerColorFor(seconds){
   if(seconds >= 86400) return '#ff4d4d'; // 24h+: red
@@ -2027,7 +2033,7 @@ function tickCurrencyDisplay(){
   } else {
     displayedPixels = state.pixels;
   }
-  pixelValueEl.textContent = fmtMoney(displayedPixels);
+  pixelValueEl.textContent = fmtMoney(displayedPixels).replace(MONEY_ICON, ''); // the coin icon beside it already is the money icon
 }
 
 var titleEl;
@@ -2035,7 +2041,7 @@ function updateTitleText(){
   if(!titleEl) return;
   if(state.titleShowingMilestone){
     var pct = Math.min(100, (state.pixels/DOLLAR)*100);
-    var pctDecimals = state.pixels < CENT ? 3 : 2; // still shown in ₥ -> 1000ths; moved into ¢/$ -> 100ths
+    var pctDecimals = state.pixels < CENT ? 3 : 2; // still shown in sub-cent pixels -> 1000ths; moved into ¢/$ -> 100ths
     titleEl.textContent = pct.toFixed(pctDecimals) + '% to $1';
   } else {
     titleEl.textContent = '🌾 SEED & WAIT';
@@ -2104,7 +2110,7 @@ function buildPlantTile(plant, opts){
     var tagCount = tagCountFor(plant);
     var tagFontPx = Math.max(4, 6 - (tagCount - 1));
     iconHtml = '<span class="plant" style="font-size:'+tpx+'px;'+seedColorFilterStyle(seed)+'">'+seed.plant+'</span>' +
-               '<span class="fruitOverlay'+vCls+'">x'+fruitCount+'</span>';
+               '<span class="fruitOverlay'+vCls+'">x'+fmtNum(fruitCount)+'</span>';
     badgeHtml = '<div class="timer'+timerClassAttr+'"'+timerStyle+'>⏳ '+fmtDuration(plant.growSeconds)+'</div>' +
                 (tagsHtml ? '<div class="mutationTagRow" style="font-size:'+tagFontPx+'px;">'+tagsHtml+'</div>' : '') +
                 '<div class="fruitcount two-line"><span>Tree '+sizeBoostHtml(plant.lockedTreeSize, sizeBoost)+'</span><span>Fruit '+fmtSize(mult)+'</span></div>';
@@ -2113,7 +2119,7 @@ function buildPlantTile(plant, opts){
     } else if(fruitCount <= 0){
       actionHtml = '<div class="invNotice">🐾 Eaten bare -- nothing left to harvest</div>';
     } else if(plant.revealed){
-      actionHtml = '<button class="actionBtn harvestBtn">HARVEST <span class="fruitQtyBtn '+vCls.trim()+'">x'+fruitCount+'</span></button>';
+      actionHtml = '<button class="actionBtn harvestBtn">HARVEST <span class="fruitQtyBtn '+vCls.trim()+'">x'+fmtNum(fruitCount)+'</span></button>';
     }
   }
   el.innerHTML = iconHtml + badgeHtml + '<div class="actionRow">'+actionHtml+'</div>';
@@ -2709,6 +2715,9 @@ function tagCountFor(plant){
 }
 
 /* ===================== PETS ===================== */
+// Pets are switched off for now (all code and saved pet data kept intact so they can return):
+// flip this to true to bring back the Quests button, the cat, and the whole pet simulation.
+var PETS_ENABLED = false;
 var PET_TYPES = {
   cat: {
     name:'Cat', icon:'🐱', rarity:'rare', abilityEnergyCost:5,
@@ -2935,6 +2944,7 @@ function petEatTick(pet, now){
   pet.eatingUntil = now + 4000;
 }
 function petTick(){
+  if(!PETS_ENABLED) return;
   var pets = state.pets || [];
   if(!pets.length) return;
   var now = Date.now();
@@ -3009,6 +3019,7 @@ function closePetMenuOnce(){ document.getElementById('petMenuPopup').hidden = tr
 function renderPets(){
   var layer = document.getElementById('petLayer');
   if(!layer) return;
+  if(!PETS_ENABLED){ if(layer.firstChild) layer.innerHTML = ''; return; }
   var pets = state.pets || [];
   var seen = {};
   pets.forEach(function(pet){
@@ -3125,7 +3136,7 @@ function renderShop(){
       '</div>' +
       '<div class="shopBuy">' +
         '<button class="buyBtn" '+(afford?'':'disabled')+'>'+fmtMoney(seed.price)+'</button>' +
-        '<div class="ownedTag">owned: '+owned+'</div>' +
+        '<div class="ownedTag">owned: '+fmtNum(owned)+'</div>' +
       '</div>';
     row.querySelector('.buyBtn').addEventListener('click', function(){
       if(state.pixels < seed.price) return;
@@ -3621,12 +3632,30 @@ function readyScreen(desc, onStart){
   });
 }
 
+/* ---- mini-game balance ----
+   Every game reports its own raw score (key presses, pixels, dots, ms-based curves...) on wildly
+   different scales, so each one is normalized against a "par" (a solid, average performance) and
+   converted to the same buff scale: par = MINIGAME_TARGET x, and the best possible play tops out at
+   MINIGAME_CAP x par. Result: no game is a better or worse deal than another, while skill still matters. */
+var MINIGAME_TARGET = 60;
+var MINIGAME_CAP = 1.8;
+var MINIGAME_PAR = {
+  spacebar:55, typing:100, mouse:12, reaction:100, cps:60, jitter:40,
+  numstop:100, dotswiper:40, dotreaction:120, followball:90, clickspeed:100
+};
+function balanceMinigameScore(key, raw){
+  var par = MINIGAME_PAR[key];
+  if(!par || !(raw > 0)) return Math.max(0, raw || 0);
+  var ratio = Math.min(MINIGAME_CAP, raw / par);
+  return Math.round(MINIGAME_TARGET * ratio * 10) / 10;
+}
 function finishMinigame(score, label){
   disarmSkip();
   stopRaceMusic();
   SFX.reward();
   var ctx = minigameCtx;
   if(!ctx){ closeMinigame(); return; }
+  score = balanceMinigameScore(lastGameKey, score);
   ctx.plant.pendingGameKey = null;
   trackGameCompletion(lastGameKey, score);
   if(ctx.kind === 'seedBuff'){ renderSeedBuffResult(ctx.plant, score, label); }
@@ -3900,7 +3929,8 @@ function gameReaction(){
             cleanupGreen();
             SFX.mgClick();
             var delayMs = performance.now() - greenAt;
-            var mult = delayMs <= 1 ? (220 - delayMs*20) : Math.max(1, 200 - (delayMs-1)*0.2);
+            // par (100) = a ~300ms reaction; 150ms is 1.5x par, ~0ms tops out, 600ms+ is nearly worthless
+            var mult = Math.max(5, 100 * (1 + (300 - delayMs) / 300));
             finishMinigame(mult, 'Reacted in '+delayMs.toFixed(0)+'ms!');
           };
           var onGreenTouch = function(e){ e.preventDefault(); onGreenAction(); };
@@ -4007,7 +4037,8 @@ function gameNumStop(){
       gamepadActionCallback = null;
       var val = parseFloat(el.textContent);
       var dist = Math.abs(val - 10);
-      var mult = Math.max(1, 500 - dist*1000);
+      // par (100) = landing ~0.3 away from 10.00; dead-on is 1.8x par, and it falls off smoothly instead of cliffing to 1
+      var mult = Math.max(2, 180 * Math.exp(-dist * 1.96));
       finishMinigame(mult, 'Landed on '+val.toFixed(2)+' (dist '+dist.toFixed(2)+')');
     };
     stopBtn.addEventListener('click', doStop);
@@ -4769,7 +4800,7 @@ function start(hotData){
   questsOverlay.addEventListener('click', function(e){ if(e.target === questsOverlay){ SFX.close(); questsOverlay.hidden = true; } });
   document.getElementById('feedPlotCancelBtn').addEventListener('click', function(){ SFX.click(); cancelFeedPlotPicker(); });
   document.getElementById('feedPlotDoneBtn').addEventListener('click', function(){ SFX.click(); confirmFeedPlotPicker(); });
-  renderQuests(); // sets the header button's notification dot right away
+  if(PETS_ENABLED){ document.getElementById('questsBtn').hidden = false; renderQuests(); } // sets the header button's notification dot right away
 
   var mergeConfirmOverlay = document.getElementById('mergeConfirmOverlay');
   document.getElementById('mergeCancelBtn').addEventListener('click', function(){
